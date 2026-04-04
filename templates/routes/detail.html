@@ -113,7 +113,7 @@
                         {{ from_stop.city }} → {{ to_stop.city }} | {{ segment_price }} тг
                     </span>
                 </div>
-                <div class="card-body p-4">
+                <div class="card-body p-4" style="display: flex;flex-direction: column;align-items: center;">
                     <div class="text-center mb-4">
                         <div class="d-inline-flex align-items-center gap-2 bg-light rounded-pill px-4 py-2">
                             <i class="bi bi-caret-up-fill text-primary"></i>
@@ -122,9 +122,9 @@
                         </div>
                     </div>
 
-                    <div class="seat-grid justify-content-center">
+                    <div class="seat-grid justify-content-center" style="width:fit-content;">
                         {% for row_num, cols in grid_rows %}
-                        <div class="seat-row justify-content-center">
+                        <div class="seat-row">
                             <span class="text-muted small fw-600 me-2" style="width:22px;">{{ row_num }}</span>
                             {% for col_num, seat in cols.items %}
                             <div class="seat {% if seat.is_occupied %}taken{% else %}free{% endif %}"
