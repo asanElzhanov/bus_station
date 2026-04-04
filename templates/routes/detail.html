@@ -242,6 +242,7 @@
                     <div class="mb-3">
                         <label class="form-label fw-600">Телефон <span class="text-danger">*</span></label>
                         <input type="tel" name="phone" class="form-control" required
+                               id="phoneInput"
                                placeholder="+7 777 123 45 67">
                     </div>
                     <div class="mb-3">
@@ -335,6 +336,55 @@
 {% block extra_js %}
 <script>
 const routePk = {{ route.pk }};
+const phoneInput = document.getElementById('phoneInput');
+
+function formatPhone(value) {
+    const digits = value.replace(/\D/g, '').replace(/^8/, '7').slice(0, 11);
+    const normalized = digits.startsWith('7') ? digits : `7${digits}`;
+    const parts = [];
+
+    if (normalized.length > 0) {
+        parts.push('+7');
+    }
+    if (normalized.length > 1) {
+        parts.push(` ${normalized.slice(1, 4)}`);
+    }
+    if (normalized.length > 4) {
+        parts.push(` ${normalized.slice(4, 7)}`);
+    }
+    if (normalized.length > 7) {
+        parts.push(` ${normalized.slice(7, 9)}`);
+    }
+    if (normalized.length > 9) {
+        parts.push(` ${normalized.slice(9, 11)}`);
+    }
+
+    return parts.join('').trimEnd();
+}
+
+if (phoneInput) {
+    phoneInput.addEventListener('focus', () => {
+        if (!phoneInput.value) {
+            phoneInput.value = '+7 ';
+        }
+    });
+
+    phoneInput.addEventListener('input', () => {
+        phoneInput.value = formatPhone(phoneInput.value);
+    });
+
+    phoneInput.addEventListener('keydown', (event) => {
+        if (phoneInput.selectionStart <= 3 && (event.key === 'Backspace' || event.key === 'Delete')) {
+            event.preventDefault();
+        }
+    });
+
+    phoneInput.addEventListener('paste', () => {
+        setTimeout(() => {
+            phoneInput.value = formatPhone(phoneInput.value);
+        }, 0);
+    });
+}
 
 function selectSeat(seatId, seatNum) {
     document.querySelectorAll('.seat.selected').forEach(el => {
