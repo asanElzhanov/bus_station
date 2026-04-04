@@ -46,8 +46,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# ─── CSRF Configuration ──────────────────────────────────────────────────────
 CSRF_TRUSTED_ORIGINS = [
-    "https://*.ngrok-free.app"
+    origin.strip() for origin in config('CSRF_TRUSTED_ORIGINS', default='').split(',') if origin.strip()
 ]
 
 ROOT_URLCONF = 'config.urls'
