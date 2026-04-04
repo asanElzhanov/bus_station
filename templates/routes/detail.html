@@ -6,7 +6,7 @@
     <div class="container">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-2">
-                <li class="breadcrumb-item"><a href="{% url 'routes:list' %}" class="text-white opacity-75">Маршруты</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'routes:list' %}?date={{ selected_date }}{% if search_from %}&from_city={{ search_from|urlencode }}{% endif %}{% if search_to %}&to_city={{ search_to|urlencode }}{% endif %}" class="text-white opacity-75">Маршруты</a></li>
                 <li class="breadcrumb-item active text-white">{{ route.name }}</li>
             </ol>
         </nav>
@@ -28,6 +28,8 @@
         </div>
         <div class="card-body p-4">
             <form method="get" id="segmentForm" class="row g-3 align-items-end">
+                {% if search_from %}<input type="hidden" name="from_city" value="{{ search_from }}">{% endif %}
+                {% if search_to %}<input type="hidden" name="to_city" value="{{ search_to }}">{% endif %}
                 <div class="col-md-3">
                     <label class="form-label fw-600"><i class="bi bi-geo-alt text-primary me-1"></i>Дата поездки</label>
                     <input type="date" name="date" value="{{ selected_date }}"

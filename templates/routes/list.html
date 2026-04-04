@@ -12,24 +12,36 @@
     <!-- Поиск -->
     <div class="card mb-4">
         <div class="card-body p-4">
-            <form method="get" class="row g-3 align-items-end">
+            <form method="get" id="routeFilterForm" class="row g-3 align-items-end">
                 <div class="col-md-4">
                     <label class="form-label fw-600 small">Откуда</label>
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt text-primary"></i></span>
-                        <input type="text" name="from_city" value="{{ search_from }}"
-                               class="form-control border-start-0" placeholder="Астана" list="cities-list">
+                        <select name="from_city" class="form-select border-start-0">
+                            <option value="">Любой город</option>
+                            {% for c in cities %}
+                            <option value="{{ c }}" {% if search_from == c %}selected{% endif %}>{{ c }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-600 small">Куда</label>
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt-fill text-danger"></i></span>
-                        <input type="text" name="to_city" value="{{ search_to }}"
-                               class="form-control border-start-0" placeholder="Алматы" list="cities-list">
+                        <select name="to_city" class="form-select border-start-0">
+                            <option value="">Любой город</option>
+                            {% for c in cities %}
+                            <option value="{{ c }}" {% if search_to == c %}selected{% endif %}>{{ c }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
-                <div class="col-md-4 d-flex gap-2">
+                <div class="col-md-2">
+                    <label class="form-label fw-600 small">Дата</label>
+                    <input type="date" name="date" value="{{ search_date }}" class="form-control">
+                </div>
+                <div class="col-md-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary flex-fill">
                         <i class="bi bi-search me-1"></i>Найти
                     </button>
@@ -40,7 +52,6 @@
                     {% endif %}
                 </div>
             </form>
-            <datalist id="cities-list">{% for c in cities %}<option value="{{ c }}">{% endfor %}</datalist>
         </div>
     </div>
 
@@ -62,7 +73,7 @@
                         <span class="text-muted small"><i class="bi bi-geo me-1"></i>{{ stops|length }} остановок</span>
                     </div>
 
-                    <a href="{% url 'routes:detail' route.pk %}" class="btn btn-primary w-100">
+                    <a href="{% url 'routes:detail' route.pk %}?date={{ search_date }}{% if search_from %}&from_city={{ search_from|urlencode }}{% endif %}{% if search_to %}&to_city={{ search_to|urlencode }}{% endif %}{% if route.prefill_from_stop_id %}&from_stop={{ route.prefill_from_stop_id }}{% endif %}{% if route.prefill_to_stop_id %}&to_stop={{ route.prefill_to_stop_id }}{% endif %}" class="btn btn-primary w-100 route-detail-link">
                         <i class="bi bi-ticket-perforated me-1"></i>Выбрать место
                     </a>
                 </div>
@@ -91,4 +102,46 @@
 .stop-mini-line { position: absolute; top: 4px; left: 50%; right: -50%; height: 2px; background: #93c5fd; z-index: 1; }
 .stop-mini-label { margin-top: 6px; text-align: center; display: flex; flex-direction: column; }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterForm = document.getElementById('routeFilterForm');
+    if (!filterForm) return;
+
+    const fromField = filterForm.querySelector('select[name="from_city"]');
+    const toField = filterForm.querySelector('select[name="to_city"]');
+    const dateField = filterForm.querySelector('input[name="date"]');
+
+    document.querySelectorAll('.route-detail-link').forEach(function (link) {
+        link.addEventListener('click', function () {
+            const url = new URL(link.href, window.location.origin);
+
+            url.searchParams.delete('from_stop');
+            url.searchParams.delete('to_stop');
+
+            if (fromField && fromField.value) {
+                url.searchParams.set('from_city', fromField.value);
+            } else {
+                url.searchParams.delete('from_city');
+            }
+
+            if (toField && toField.value) {
+                url.searchParams.set('to_city', toField.value);
+            } else {
+                url.searchParams.delete('to_city');
+            }
+
+            if (dateField && dateField.value) {
+                url.searchParams.set('date', dateField.value);
+            } else {
+                url.searchParams.delete('date');
+            }
+
+            link.href = url.pathname + url.search;
+        });
+    });
+});
+</script>
 {% endblock %}

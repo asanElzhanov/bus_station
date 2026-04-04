@@ -1,30 +1,93 @@
 from datetime import date
+from django import forms
+from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.forms import inlineformset_factory
+from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.views import View
 
 from users.permissions import ManagerRequiredMixin, AdminRequiredMixin
 from bookings.views import get_occupied_seat_ids
+from bookings.models import Booking
 from .models import Route, Stop
 from .forms import RouteForm, StopForm
 
 
+class StopInlineFormSet(BaseInlineFormSet):
+    deletion_widget = forms.HiddenInput
+
+
 class RouteListView(View):
     def get(self, request):
-        routes = Route.objects.filter(is_approved=True).prefetch_related('stops')
+        routes_qs = Route.objects.filter(is_approved=True).prefetch_related('stops').annotate(
+            total_seats=Count('transport__seats', distinct=True)
+        )
         search_from = request.GET.get('from_city', '').strip()
         search_to   = request.GET.get('to_city', '').strip()
+        search_date_raw = request.GET.get('date', '').strip()
+
+        try:
+            search_date_obj = date.fromisoformat(search_date_raw) if search_date_raw else date.today()
+        except ValueError:
+            search_date_obj = date.today()
+        search_date = str(search_date_obj)
+
         if search_from:
-            routes = routes.filter(stops__city__icontains=search_from).distinct()
+            routes_qs = routes_qs.filter(stops__city__icontains=search_from).distinct()
         if search_to:
-            routes = routes.filter(stops__city__icontains=search_to).distinct()
+            routes_qs = routes_qs.filter(stops__city__icontains=search_to).distinct()
+
+        routes = list(routes_qs)
+
+        def pick_stop(candidates, city_query):
+            if not city_query:
+                return None
+            city_query_l = city_query.lower()
+            exact = next((s for s in candidates if s.city.lower() == city_query_l), None)
+            if exact:
+                return exact
+            return next((s for s in candidates if city_query_l in s.city.lower()), None)
+
+        prepared_routes = []
+        for route in routes:
+            stops = list(route.stops.all())
+            boarding_stops = [s for s in stops if s.is_boarding_allowed]
+            alighting_stops = [s for s in stops if s.is_alighting_allowed]
+
+            selected_from = pick_stop(boarding_stops, search_from)
+            to_candidates = alighting_stops
+            if selected_from:
+                to_candidates = [s for s in alighting_stops if s.order > selected_from.order]
+            selected_to = pick_stop(to_candidates, search_to)
+
+            if search_from and not selected_from:
+                continue
+            if search_to and not selected_to:
+                continue
+
+            route.prefill_from_stop_id = str(selected_from.pk) if selected_from else ''
+            route.prefill_to_stop_id = str(selected_to.pk) if selected_to else ''
+            prepared_routes.append(route)
+
+        routes = prepared_routes
+
+        route_ids = [route.id for route in routes]
+        occupied_rows = Booking.objects.filter(
+            route_id__in=route_ids,
+            travel_date=search_date_obj,
+            status__in=[Booking.Status.BOOKED, Booking.Status.PAID],
+        ).values('route_id').annotate(occupied=Count('seat_id', distinct=True))
+        occupied_map = {row['route_id']: row['occupied'] for row in occupied_rows}
+
+        routes = [route for route in routes if route.total_seats > occupied_map.get(route.id, 0)]
+
         cities = sorted(set(
             Stop.objects.filter(route__is_approved=True).values_list('city', flat=True)
         ))
         return render(request, 'routes/list.html', {
             'routes': routes, 'cities': cities,
             'search_from': search_from, 'search_to': search_to,
+            'search_date': search_date,
         })
 
 
@@ -35,12 +98,46 @@ class RouteDetailView(View):
 
         today         = str(date.today())
         selected_date = request.GET.get('date', today)
+        search_from = request.GET.get('from_city', '').strip()
+        search_to = request.GET.get('to_city', '').strip()
         from_stop_pk  = request.GET.get('from_stop', '')
         to_stop_pk    = request.GET.get('to_stop', '')
 
         # Остановки доступные для выбора пользователем
         boarding_stops   = [s for s in all_stops if s.is_boarding_allowed]
         alighting_stops  = [s for s in all_stops if s.is_alighting_allowed]
+
+        if not from_stop_pk and search_from:
+            matched_from = next(
+                (s for s in boarding_stops if s.city.lower() == search_from.lower()),
+                None,
+            )
+            if not matched_from:
+                matched_from = next(
+                    (s for s in boarding_stops if search_from.lower() in s.city.lower()),
+                    None,
+                )
+            if matched_from:
+                from_stop_pk = str(matched_from.pk)
+
+        if not to_stop_pk and search_to:
+            to_candidates = alighting_stops
+            if from_stop_pk:
+                from_candidate = next((s for s in all_stops if str(s.pk) == str(from_stop_pk)), None)
+                if from_candidate:
+                    to_candidates = [s for s in alighting_stops if s.order > from_candidate.order]
+
+            matched_to = next(
+                (s for s in to_candidates if s.city.lower() == search_to.lower()),
+                None,
+            )
+            if not matched_to:
+                matched_to = next(
+                    (s for s in to_candidates if search_to.lower() in s.city.lower()),
+                    None,
+                )
+            if matched_to:
+                to_stop_pk = str(matched_to.pk)
 
         from_stop = to_stop = None
         if from_stop_pk and to_stop_pk:
@@ -91,11 +188,14 @@ class RouteDetailView(View):
             'segment_price': segment_price,
             'grid_rows': grid_rows,
             'segment_selected': bool(from_stop and to_stop),
+            'search_from': search_from,
+            'search_to': search_to,
         })
 
 
 StopFormSet = inlineformset_factory(
     Route, Stop, form=StopForm,
+    formset=StopInlineFormSet,
     extra=3, can_delete=True, min_num=2, validate_min=True,
 )
 

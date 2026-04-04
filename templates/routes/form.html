@@ -57,13 +57,11 @@
                         {% for stop_form in formset %}
                         <div class="stop-form-row card border mb-3 p-3 rounded-3 {% if stop_form.instance.pk %}bg-light{% endif %}">
                             {% if formset.can_delete %}
+                            <div class="d-none">{{ stop_form.DELETE }}</div>
                             <div class="d-flex justify-content-end mb-2">
-                                <div class="form-check">
-                                    {{ stop_form.DELETE }}
-                                    <label class="form-check-label text-danger small" for="{{ stop_form.DELETE.id_for_label }}">
-                                        Удалить остановку
-                                    </label>
-                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-stop-btn">
+                                    <i class="bi bi-trash me-1"></i>Убрать
+                                </button>
                             </div>
                             {% endif %}
                             {% for hidden in stop_form.hidden_fields %}{{ hidden }}{% endfor %}
@@ -104,6 +102,56 @@
                         {% endfor %}
                         </div>
 
+                        <div class="d-flex justify-content-start mt-3">
+                            <button type="button" id="addStopBtn" class="btn btn-outline-primary">
+                                <i class="bi bi-plus-circle me-1"></i>Добавить остановку
+                            </button>
+                        </div>
+
+                        <template id="emptyStopTemplate">
+                            <div class="stop-form-row card border mb-3 p-3 rounded-3">
+                                {% for hidden in formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+                                <div class="d-none">{{ formset.empty_form.DELETE }}</div>
+                                <div class="d-flex justify-content-end mb-2">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-stop-btn">
+                                        <i class="bi bi-trash me-1"></i>Убрать
+                                    </button>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-600 small">Город *</label>
+                                        {{ formset.empty_form.city }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-600 small">Порядок *</label>
+                                        {{ formset.empty_form.order }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-600 small">Цена от начала (тг)</label>
+                                        {{ formset.empty_form.price_from_start }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-600 small">Мин. от старта</label>
+                                        {{ formset.empty_form.arrival_offset_minutes }}
+                                    </div>
+                                    <div class="col-12 d-flex gap-4 mt-1">
+                                        <div class="form-check">
+                                            {{ formset.empty_form.is_boarding_allowed }}
+                                            <label class="form-check-label small text-success fw-600" for="{{ formset.empty_form.is_boarding_allowed.id_for_label }}">
+                                                <i class="bi bi-box-arrow-in-right me-1"></i>Посадка разрешена
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            {{ formset.empty_form.is_alighting_allowed }}
+                                            <label class="form-check-label small text-danger fw-600" for="{{ formset.empty_form.is_alighting_allowed.id_for_label }}">
+                                                <i class="bi bi-box-arrow-right me-1"></i>Высадка разрешена
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
                         {% if formset.non_form_errors %}
                         <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
                         {% endif %}
@@ -139,4 +187,42 @@
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const addBtn = document.getElementById('addStopBtn');
+    const container = document.getElementById('stopsContainer');
+    const template = document.getElementById('emptyStopTemplate');
+    const totalFormsInput = document.getElementById('id_stops-TOTAL_FORMS');
+
+    if (!addBtn || !container || !template || !totalFormsInput) return;
+
+    addBtn.addEventListener('click', function () {
+        const formIndex = parseInt(totalFormsInput.value, 10);
+        const html = template.innerHTML.replaceAll('__prefix__', String(formIndex));
+
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html.trim();
+        const row = wrapper.firstElementChild;
+        container.appendChild(row);
+
+        totalFormsInput.value = String(formIndex + 1);
+    });
+
+    container.addEventListener('click', function (event) {
+        const removeBtn = event.target.closest('.remove-stop-btn');
+        if (!removeBtn) return;
+        const row = removeBtn.closest('.stop-form-row');
+        if (!row) return;
+
+        const deleteInput = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (deleteInput) {
+            deleteInput.checked = true;
+        }
+        row.style.display = 'none';
+    });
+});
+</script>
 {% endblock %}
