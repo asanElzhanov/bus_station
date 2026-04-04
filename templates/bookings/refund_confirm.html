@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Возврат билета — АвтоВокзал{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm">
+                <div style="height:5px;background:linear-gradient(90deg,#f59e0b,#ef4444);border-radius:16px 16px 0 0;"></div>
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+                             style="width:72px;height:72px;background:#fef3c7;">
+                            <i class="bi bi-arrow-counterclockwise text-warning" style="font-size:2.2rem;"></i>
+                        </div>
+                        <h3 class="fw-800 fw-montserrat">Возврат билета</h3>
+                        <p class="text-muted">Подтвердите возврат</p>
+                    </div>
+
+                    <!-- Детали билета -->
+                    <div class="rounded-3 p-4 mb-4" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                        <div class="row g-3 text-center">
+                            <div class="col-12">
+                                <div class="text-muted small">Маршрут</div>
+                                <div class="fw-700">{{ booking.route.name }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Посадка</div>
+                                <div class="fw-700 text-success">{{ booking.from_stop.city }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Высадка</div>
+                                <div class="fw-700 text-danger">{{ booking.to_stop.city }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Дата</div>
+                                <div class="fw-700">{{ booking.travel_date|date:"d.m.Y" }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Место</div>
+                                <div class="fw-800 fs-4 text-primary">{{ booking.seat.seat_number }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">К возврату</div>
+                                <div class="fw-800 text-success">{{ booking.price }} тг</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Бронь</div>
+                                <div class="fw-600 text-muted">#{{ booking.pk }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Дедлайн -->
+                    <div class="alert border-0 rounded-3 mb-4 py-2 px-3 d-flex align-items-center gap-2"
+                         style="background:#fff7ed;color:#9a3412;">
+                        <i class="bi bi-clock-history flex-shrink-0"></i>
+                        <span class="small">
+                            Возврат возможен до отправления:
+                            <strong>{{ booking.refund_deadline|date:"d.m.Y H:i" }}</strong>
+                        </span>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-3">
+                            <a href="{% url 'bookings:my' %}" class="btn btn-outline-secondary flex-fill">
+                                Отмена
+                            </a>
+                            <button type="submit" class="btn btn-danger flex-fill fw-600">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i>Подтвердить возврат
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

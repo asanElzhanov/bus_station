@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Бронирование подтверждено!{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <div class="card border-0 shadow-lg">
+                <div class="card-body p-5">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-4"
+                         style="width:90px;height:90px;background:linear-gradient(135deg,#d1fae5,#a7f3d0);">
+                        <i class="bi bi-check-circle-fill text-success" style="font-size:3rem;"></i>
+                    </div>
+                    <h2 class="fw-800 fw-montserrat text-success mb-2">Бронь оформлена!</h2>
+                    <p class="text-muted mb-4">Ваше место успешно забронировано.</p>
+
+                    <div class="card border-0 rounded-3 p-4 mb-4" style="background:#f8fafc;">
+                        <div class="row text-center g-3">
+                            <div class="col-12">
+                                <div class="text-muted small">Маршрут</div>
+                                <div class="fw-700 fs-6">{{ booking.route.name }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Посадка</div>
+                                <div class="fw-700 text-success">{{ booking.from_stop.city }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Высадка</div>
+                                <div class="fw-700 text-danger">{{ booking.to_stop.city }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Дата</div>
+                                <div class="fw-700">{{ booking.travel_date|date:"d.m.Y" }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Место</div>
+                                <div class="fw-800 fs-4 text-primary">{{ booking.seat.seat_number }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Пассажир</div>
+                                <div class="fw-700">{{ booking.customer_name }}</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted small">Сумма</div>
+                                <div class="fw-800 text-success">{{ booking.price }} тг</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="text-muted small">Номер брони</div>
+                                <div class="fw-700 text-muted font-monospace">#{{ booking.pk }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="{% url 'bookings:my' %}" class="btn btn-primary w-100 fw-600 mb-2">
+                        <i class="bi bi-ticket-perforated me-1"></i>Мои билеты
+                    </a>
+                    <a href="{% url 'routes:list' %}" class="btn btn-outline-primary w-100 fw-600">
+                        <i class="bi bi-map me-1"></i>К маршрутам
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

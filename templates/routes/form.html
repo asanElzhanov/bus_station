@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}{{ action }} маршрут — АвтоВокзал{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <nav aria-label="breadcrumb"><ol class="breadcrumb mb-2">
+            <li class="breadcrumb-item"><a href="{% url 'routes:manager_list' %}" class="text-white opacity-75">Маршруты</a></li>
+            <li class="breadcrumb-item active text-white">{{ action }} маршрут</li>
+        </ol></nav>
+        <h1>{{ action }} маршрут</h1>
+    </div>
+</div>
+<div class="container pb-5">
+    <form method="post">
+        {% csrf_token %}
+        <div class="row g-4">
+
+            <!-- Основные данные -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header py-3"><h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Основное</h6></div>
+                    <div class="card-body p-4">
+                        {% for field in form %}
+                        <div class="mb-3">
+                            <label class="form-label fw-600 small">
+                                {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ field }}
+                            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors.0 }}</div>{% endif %}
+                        </div>
+                        {% endfor %}
+
+                        <div class="alert border-0 rounded-3 mt-3" style="background:#fef3c7;color:#92400e;font-size:.85rem;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            После сохранения маршрут будет отправлен на подтверждение администратору.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Остановки -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header py-3 d-flex align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Остановки маршрута</h6>
+                        <span class="badge bg-primary ms-2">минимум 2</span>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="alert border-0 rounded-3 mb-4" style="background:#eff6ff;">
+                            <i class="bi bi-lightbulb me-1 text-primary"></i>
+                            <strong>Порядок</strong> — число от 0 (первая остановка).
+                            <strong>Цена от начала</strong> — накопленная сумма: у первой остановки <strong>0</strong>.
+                        </div>
+
+                        {{ formset.management_form }}
+                        <div id="stopsContainer">
+                        {% for stop_form in formset %}
+                        <div class="stop-form-row card border mb-3 p-3 rounded-3 {% if stop_form.instance.pk %}bg-light{% endif %}">
+                            {% if formset.can_delete %}
+                            <div class="d-flex justify-content-end mb-2">
+                                <div class="form-check">
+                                    {{ stop_form.DELETE }}
+                                    <label class="form-check-label text-danger small" for="{{ stop_form.DELETE.id_for_label }}">
+                                        Удалить остановку
+                                    </label>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% for hidden in stop_form.hidden_fields %}{{ hidden }}{% endfor %}
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-600 small">Город *</label>
+                                    {{ stop_form.city }}
+                                    {% if stop_form.city.errors %}<div class="text-danger small">{{ stop_form.city.errors.0 }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label fw-600 small">Порядок *</label>
+                                    {{ stop_form.order }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-600 small">Цена от начала (тг)</label>
+                                    {{ stop_form.price_from_start }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-600 small">Мин. от старта</label>
+                                    {{ stop_form.arrival_offset_minutes }}
+                                </div>
+                                <div class="col-12 d-flex gap-4 mt-1">
+                                    <div class="form-check">
+                                        {{ stop_form.is_boarding_allowed }}
+                                        <label class="form-check-label small text-success fw-600" for="{{ stop_form.is_boarding_allowed.id_for_label }}">
+                                            <i class="bi bi-box-arrow-in-right me-1"></i>Посадка разрешена
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        {{ stop_form.is_alighting_allowed }}
+                                        <label class="form-check-label small text-danger fw-600" for="{{ stop_form.is_alighting_allowed.id_for_label }}">
+                                            <i class="bi bi-box-arrow-right me-1"></i>Высадка разрешена
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        </div>
+
+                        {% if formset.non_form_errors %}
+                        <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Пример -->
+                <div class="card mt-3 border-0" style="background:#f0fdf4;">
+                    <div class="card-body p-3">
+                        <p class="fw-700 small text-success mb-2"><i class="bi bi-lightbulb me-1"></i>Пример заполнения:</p>
+                        <table class="table table-sm small mb-0">
+                            <thead><tr><th>Город</th><th>Порядок</th><th>Цена от начала</th><th>Мин. от старта</th></tr></thead>
+                            <tbody>
+                                <tr><td>Астана</td><td>0</td><td>0</td><td>0</td></tr>
+                                <tr><td>Кокшетау</td><td>1</td><td>1 500</td><td>120</td></tr>
+                                <tr><td>Петропавловск</td><td>2</td><td>2 800</td><td>240</td></tr>
+                                <tr><td>Алматы</td><td>3</td><td>4 200</td><td>480</td></tr>
+                            </tbody>
+                        </table>
+                        <p class="text-muted small mt-2 mb-0">
+                            Астана→Кокшетау = 1 500 тг | Кокшетау→Алматы = 2 700 тг | Астана→Алматы = 4 200 тг
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-3 justify-content-end mt-4">
+            <a href="{% url 'routes:manager_list' %}" class="btn btn-outline-secondary px-4">Отмена</a>
+            <button type="submit" class="btn btn-primary px-5 fw-600">
+                <i class="bi bi-check-lg me-1"></i>{{ action }}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

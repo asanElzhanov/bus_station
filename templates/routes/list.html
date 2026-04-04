@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Маршруты — АвтоВокзал{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1><i class="bi bi-map me-2"></i>Маршруты</h1>
+        <p class="mb-0 opacity-75">Выберите маршрут — купите билет между любыми двумя остановками</p>
+    </div>
+</div>
+<div class="container pb-5">
+
+    <!-- Поиск -->
+    <div class="card mb-4">
+        <div class="card-body p-4">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-600 small">Откуда</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt text-primary"></i></span>
+                        <input type="text" name="from_city" value="{{ search_from }}"
+                               class="form-control border-start-0" placeholder="Астана" list="cities-list">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-600 small">Куда</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-geo-alt-fill text-danger"></i></span>
+                        <input type="text" name="to_city" value="{{ search_to }}"
+                               class="form-control border-start-0" placeholder="Алматы" list="cities-list">
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill">
+                        <i class="bi bi-search me-1"></i>Найти
+                    </button>
+                    {% if search_from or search_to %}
+                    <a href="{% url 'routes:list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+            <datalist id="cities-list">{% for c in cities %}<option value="{{ c }}">{% endfor %}</datalist>
+        </div>
+    </div>
+
+    {% if routes %}
+    <div class="row g-4">
+        {% for route in routes %}
+        {% with stops=route.stops.all %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-800 fw-montserrat mb-1">{{ route.name }}</h5>
+                    <div class="text-muted small mb-3">
+                        <i class="bi bi-clock me-1"></i>{{ route.departure_time|time:"H:i" }} &nbsp;
+                        <i class="bi bi-truck me-1"></i>{{ route.transport.name }}
+                    </div>
+
+
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="text-muted small"><i class="bi bi-geo me-1"></i>{{ stops|length }} остановок</span>
+                    </div>
+
+                    <a href="{% url 'routes:detail' route.pk %}" class="btn btn-primary w-100">
+                        <i class="bi bi-ticket-perforated me-1"></i>Выбрать место
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-signpost-2 display-1 text-muted opacity-25"></i>
+        <h4 class="mt-3 text-muted">Маршруты не найдены</h4>
+        {% if search_from or search_to %}<p class="text-muted">Попробуйте изменить параметры поиска</p>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.stops-mini { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; }
+.stop-mini-item { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 60px; position: relative; }
+.stop-mini-dot { width: 10px; height: 10px; border-radius: 50%; background: #3b82f6; z-index: 2; }
+.stop-mini-dot.first { background: #22c55e; }
+.stop-mini-dot.last  { background: #ef4444; }
+.stop-mini-line { position: absolute; top: 4px; left: 50%; right: -50%; height: 2px; background: #93c5fd; z-index: 1; }
+.stop-mini-label { margin-top: 6px; text-align: center; display: flex; flex-direction: column; }
+</style>
+{% endblock %}

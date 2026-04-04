@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+{% block title %}{{ route.name }} — АвтоВокзал{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'routes:list' %}" class="text-white opacity-75">Маршруты</a></li>
+                <li class="breadcrumb-item active text-white">{{ route.name }}</li>
+            </ol>
+        </nav>
+        <h1 class="mb-2">{{ route.name }}</h1>
+        <div class="d-flex gap-3 flex-wrap opacity-90">
+            <span><i class="bi bi-clock me-1"></i>Отправление: <strong>{{ route.departure_time|time:"H:i" }}</strong></span>
+            <span><i class="bi bi-truck me-1"></i>{{ route.transport.name }}</span>
+            <span><i class="bi bi-geo me-1"></i>{{ stops|length }} остановок</span>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+
+    <!-- ── Шаг 1: Выбор параметров поездки ─────────────────────────────────── -->
+    <div class="card mb-4">
+        <div class="card-header py-3">
+            <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>Шаг 1 — Выберите параметры</h5>
+        </div>
+        <div class="card-body p-4">
+            <form method="get" id="segmentForm" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label fw-600"><i class="bi bi-geo-alt text-primary me-1"></i>Дата поездки</label>
+                    <input type="date" name="date" value="{{ selected_date }}"
+                           min="{{ today }}" class="form-control" id="dateInput">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-600"><i class="bi bi-box-arrow-in-right text-success me-1"></i>Откуда садитесь</label>
+                    <select name="from_stop" class="form-select" id="fromStopSelect">
+                        <option value="">— выберите —</option>
+                        {% for stop in boarding_stops %}
+                        <option value="{{ stop.pk }}"
+                            {% if from_stop and from_stop.pk == stop.pk %}selected{% endif %}>
+                            {{ stop.city }}{% if stop.arrival_offset_minutes %} (+{{ stop.arrival_offset_minutes }} мин){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-600"><i class="bi bi-box-arrow-right text-danger me-1"></i>Где выходите</label>
+                    <select name="to_stop" class="form-select" id="toStopSelect">
+                        <option value="">— выберите —</option>
+                        {% for stop in alighting_stops %}
+                        <option value="{{ stop.pk }}"
+                            {% if to_stop and to_stop.pk == stop.pk %}selected{% endif %}>
+                            {{ stop.city }}{% if stop.arrival_offset_minutes %} (+{{ stop.arrival_offset_minutes }} мин){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100 fw-600">
+                        <i class="bi bi-search me-1"></i>Показать места
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Маршрут-линия (визуализация остановок) ──────────────────────────── -->
+    <div class="card mb-4">
+        <div class="card-body p-4">
+            <div class="stops-timeline">
+                {% for stop in all_stops %}
+                <div class="stop-item {% if from_stop and to_stop %}{% if stop.order >= from_stop.order and stop.order <= to_stop.order %}stop-active{% endif %}{% if stop.order == from_stop.order %}stop-departure{% endif %}{% if stop.order == to_stop.order %}stop-arrival{% endif %}{% endif %}{% if not stop.is_boarding_allowed and not stop.is_alighting_allowed %} stop-restricted{% endif %}">
+                    <div class="stop-dot"></div>
+                    {% if not forloop.last %}<div class="stop-line"></div>{% endif %}
+                    <div class="stop-label">
+                        <div class="stop-city">{{ stop.city }}</div>
+                        <div class="stop-meta">
+                            {% if stop.order == 0 %}
+                            <span class="badge bg-primary">Старт {{ route.departure_time|time:"H:i" }}</span>
+                            {% elif stop.arrival_offset_minutes %}
+                            +{{ stop.arrival_offset_minutes }} мин
+                            {% endif %}
+                            {% if stop.order > 0 %}
+                            <span class="text-success fw-600">{{ stop.price_from_start }} тг</span>
+                            {% endif %}
+                            {% if not stop.is_boarding_allowed and not stop.is_alighting_allowed %}
+                            <span style="font-size:.65rem;background:#fee2e2;color:#991b1b;border-radius:4px;padding:1px 5px;">🚫 нет билетов</span>
+                            {% elif not stop.is_boarding_allowed %}
+                            <span style="font-size:.65rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;">🚫 нет посадки</span>
+                            {% elif not stop.is_alighting_allowed %}
+                            <span style="font-size:.65rem;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 5px;">🚫 нет высадки</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if segment_selected %}
+    <!-- ── Шаг 2: Схема мест ──────────────────────────────────────────────── -->
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header py-3 d-flex align-items-center gap-3">
+                    <h5 class="mb-0"><i class="bi bi-grid-3x3-gap me-2"></i>Шаг 2 — Выберите место</h5>
+                    <span class="badge bg-success ms-auto">
+                        {{ from_stop.city }} → {{ to_stop.city }} | {{ segment_price }} тг
+                    </span>
+                </div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center gap-2 bg-light rounded-pill px-4 py-2">
+                            <i class="bi bi-caret-up-fill text-primary"></i>
+                            <span class="fw-600 text-muted small">Передняя часть / Водитель</span>
+                            <i class="bi bi-caret-up-fill text-primary"></i>
+                        </div>
+                    </div>
+
+                    <div class="seat-grid justify-content-center">
+                        {% for row_num, cols in grid_rows %}
+                        <div class="seat-row justify-content-center">
+                            <span class="text-muted small fw-600 me-2" style="width:22px;">{{ row_num }}</span>
+                            {% for col_num, seat in cols.items %}
+                            <div class="seat {% if seat.is_occupied %}taken{% else %}free{% endif %}"
+                                 {% if not seat.is_occupied %}
+                                 onclick="selectSeat({{ seat.pk }}, '{{ seat.seat_number }}')"
+                                 {% endif %}
+                                 data-seat-id="{{ seat.pk }}"
+                                 title="Место {{ seat.seat_number }} — {% if seat.is_occupied %}занято{% else %}свободно{% endif %}">
+                                {{ seat.seat_number }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="seat-legend mt-4 justify-content-center">
+                        <div class="legend-item">
+                            <div class="legend-box" style="background:var(--seat-free);border-color:var(--seat-free-border)"></div>
+                            <span>Свободно</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-box" style="background:var(--seat-taken);border-color:var(--seat-taken-border)"></div>
+                            <span>Занято на вашем участке</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-box" style="background:var(--seat-selected);border-color:var(--seat-selected-border)"></div>
+                            <span>Выбрано</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Инфо-панель -->
+        <div class="col-lg-4">
+            <div class="card mb-3 border-0" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
+                <div class="card-body p-4">
+                    <h6 class="text-primary fw-700 mb-3"><i class="bi bi-info-circle me-1"></i>Ваш маршрут</h6>
+                    <dl class="mb-0 small">
+                        <dt class="text-muted">Рейс</dt>
+                        <dd class="fw-600">{{ route.name }}</dd>
+                        <dt class="text-muted">Отправление</dt>
+                        <dd class="fw-600">{{ route.departure_time|time:"H:i" }}</dd>
+                        <dt class="text-muted">Дата</dt>
+                        <dd class="fw-600">{{ selected_date }}</dd>
+                        <dt class="text-muted">Сегмент</dt>
+                        <dd class="fw-700 text-primary">{{ from_stop.city }} → {{ to_stop.city }}</dd>
+                        <dt class="text-muted">Стоимость</dt>
+                        <dd class="fw-800 fs-5 text-success">{{ segment_price }} тг</dd>
+                        <dt class="text-muted">Место</dt>
+                        <dd class="fw-700" id="selectedSeatDisplay">—</dd>
+                    </dl>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body p-4 text-center text-muted">
+                    <i class="bi bi-hand-index-thumb display-4 opacity-25 d-block mb-2"></i>
+                    Нажмите на свободное место для бронирования
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Подсказка если сегмент не выбран -->
+    <div class="card border-0" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);">
+        <div class="card-body p-5 text-center">
+            <i class="bi bi-arrow-up-circle display-2 text-success opacity-50 d-block mb-3"></i>
+            <h4 class="fw-700 text-success">Выберите маршрут выше</h4>
+            <p class="text-muted mb-0">Укажите дату, остановку посадки и высадки — <br>система покажет доступные места для вашего отрезка пути.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── Modal бронирования ─────────────────────────────────────────────────── -->
+<div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-xl overflow-hidden">
+            <div class="modal-header" style="background:linear-gradient(135deg,var(--primary-dark),var(--primary));">
+                <h5 class="modal-title text-white fw-700">
+                    <i class="bi bi-ticket-perforated me-2"></i>Место <span id="modalSeatNum"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="bookingForm" method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" name="travel_date" value="{{ selected_date }}">
+                <input type="hidden" name="from_stop" value="{{ from_stop.pk }}">
+                <input type="hidden" name="to_stop"   value="{{ to_stop.pk }}">
+
+                <div class="modal-body p-4">
+                    <!-- Резюме -->
+                    <div class="rounded-3 p-3 mb-4" style="background:#f0fdf4;border:1px solid #86efac;">
+                        <div class="row text-center g-2 small">
+                            <div class="col-4">
+                                <div class="text-muted">Сегмент</div>
+                                <div class="fw-700">{{ from_stop.city }} → {{ to_stop.city }}</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted">Дата</div>
+                                <div class="fw-700">{{ selected_date }}</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-muted">Сумма</div>
+                                <div class="fw-800 text-success">{{ segment_price }} тг</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Ваше имя <span class="text-danger">*</span></label>
+                        <input type="text" name="customer_name" class="form-control" required
+                               placeholder="Иван Иванов">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Телефон <span class="text-danger">*</span></label>
+                        <input type="tel" name="phone" class="form-control" required
+                               placeholder="+7 777 123 45 67">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Доп. информация</label>
+                        <textarea name="extra_info" class="form-control" rows="2"
+                                  placeholder="Багаж, пожелания..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 gap-2">
+                    <button type="button" class="btn btn-outline-secondary flex-fill" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary flex-fill fw-600">
+                        <i class="bi bi-check2-circle me-1"></i>Забронировать
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Stops timeline ─────────────────────────── */
+.stops-timeline {
+    display: flex;
+    align-items: flex-start;
+    overflow-x: auto;
+    padding: 1rem 0;
+    gap: 0;
+}
+.stop-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    flex: 1;
+    min-width: 90px;
+}
+.stop-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #d1d5db;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #d1d5db;
+    z-index: 2; position: relative;
+    transition: all .2s;
+}
+.stop-line {
+    position: absolute;
+    top: 7px; left: 50%; right: -50%;
+    height: 3px;
+    background: #e5e7eb;
+    z-index: 1;
+}
+.stop-label {
+    text-align: center;
+    margin-top: 10px;
+    padding: 0 4px;
+}
+.stop-city {
+    font-weight: 700;
+    font-size: .82rem;
+    color: #374151;
+}
+.stop-meta {
+    font-size: .72rem;
+    color: #9ca3af;
+    margin-top: 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+/* Active segment */
+.stop-active .stop-dot  { background: #3b82f6; box-shadow: 0 0 0 2px #3b82f6; }
+.stop-active .stop-line { background: #3b82f6; }
+.stop-active .stop-city { color: #1d4ed8; }
+/* Departure */
+.stop-departure .stop-dot { background: #22c55e; box-shadow: 0 0 0 2px #22c55e; width:20px; height:20px; margin-top:-2px; }
+.stop-departure .stop-city { color: #15803d; }
+/* Arrival */
+.stop-arrival .stop-dot { background: #ef4444; box-shadow: 0 0 0 2px #ef4444; width:20px; height:20px; margin-top:-2px; }
+.stop-arrival .stop-city { color: #b91c1c; }
+/* Restricted stop */
+.stop-restricted .stop-dot  { background: #e5e7eb !important; box-shadow: 0 0 0 2px #9ca3af !important; }
+.stop-restricted .stop-city { color: #9ca3af; text-decoration: line-through; }
+.stop-restricted .stop-line { background: #e5e7eb !important; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const routePk = {{ route.pk }};
+
+function selectSeat(seatId, seatNum) {
+    document.querySelectorAll('.seat.selected').forEach(el => {
+        el.classList.remove('selected');
+        el.classList.add('free');
+    });
+    const el = document.querySelector(`[data-seat-id="${seatId}"]`);
+    if (el) { el.classList.remove('free'); el.classList.add('selected'); }
+
+    document.getElementById('selectedSeatDisplay').textContent = `Место ${seatNum}`;
+    document.getElementById('modalSeatNum').textContent = `№${seatNum}`;
+    document.getElementById('bookingForm').action = `/bookings/create/${routePk}/seat/${seatId}/`;
+
+    new bootstrap.Modal(document.getElementById('bookingModal')).show();
+}
+
+// Авто-сабмит при смене даты
+document.getElementById('dateInput').addEventListener('change', function () {
+    document.getElementById('segmentForm').submit();
+});
+
+// Валидация: to_stop должен быть позже from_stop
+document.getElementById('segmentForm').addEventListener('submit', function(e) {
+    const from = document.getElementById('fromStopSelect');
+    const to   = document.getElementById('toStopSelect');
+    if (!from.value || !to.value) {
+        e.preventDefault();
+        alert('Выберите остановку посадки и высадки');
+        return;
+    }
+    // order-данные получим через data-атрибуты
+});
+</script>
+{% endblock %}

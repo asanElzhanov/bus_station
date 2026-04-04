@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Бронь #{{ booking.pk }}{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <nav aria-label="breadcrumb"><ol class="breadcrumb mb-2">
+            <li class="breadcrumb-item"><a href="{% url 'bookings:list' %}" class="text-white opacity-75">Бронирования</a></li>
+            <li class="breadcrumb-item active text-white">Бронь #{{ booking.pk }}</li>
+        </ol></nav>
+        <h1>Бронь #{{ booking.pk }}</h1>
+    </div>
+</div>
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-body p-4">
+                    <dl class="row">
+                        <dt class="col-5 text-muted">Маршрут</dt>
+                        <dd class="col-7 fw-600">{{ booking.route }}</dd>
+                        <dt class="col-5 text-muted">Дата поездки</dt>
+                        <dd class="col-7 fw-600">{{ booking.travel_date|date:"d.m.Y" }}</dd>
+                        <dt class="col-5 text-muted">Место</dt>
+                        <dd class="col-7"><span class="badge bg-primary fs-6">{{ booking.seat.seat_number }}</span></dd>
+                        <dt class="col-5 text-muted">Клиент</dt>
+                        <dd class="col-7">{{ booking.customer_name }}</dd>
+                        <dt class="col-5 text-muted">Телефон</dt>
+                        <dd class="col-7">{{ booking.phone }}</dd>
+                        <dt class="col-5 text-muted">Доп. инфо</dt>
+                        <dd class="col-7">{{ booking.extra_info|default:"—" }}</dd>
+                        <dt class="col-5 text-muted">Статус</dt>
+                        <dd class="col-7">
+                            <span class="badge rounded-pill status-{{ booking.status }} px-3 py-2">
+                                {{ booking.get_status_display }}
+                            </span>
+                        </dd>
+                        <dt class="col-5 text-muted">Создано</dt>
+                        <dd class="col-7">{{ booking.created_at|date:"d.m.Y H:i" }}</dd>
+                    </dl>
+                    <div class="d-flex gap-3 mt-3">
+                        <a href="{% url 'bookings:list' %}" class="btn btn-outline-secondary flex-fill">← Назад</a>
+                        {% if booking.status != 'cancelled' %}
+                        <form method="post" action="{% url 'bookings:cancel' booking.pk %}"
+                              onsubmit="return confirm('Отменить бронирование?')">
+                            {% csrf_token %}
+                            <button class="btn btn-danger">Отменить бронь</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}Оплата — АвтоВокзал{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1><i class="bi bi-credit-card me-2"></i>Оплата билета</h1>
+        <p class="mb-0 opacity-75">Проверьте детали бронирования перед оплатой</p>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <!-- Progress steps -->
+            <div class="d-flex align-items-center justify-content-center mb-5 gap-0">
+                <div class="text-center">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-700"
+                         style="width:40px;height:40px;background:var(--success);color:#fff;">✓</div>
+                    <div class="small mt-1 text-success fw-600">Выбор места</div>
+                </div>
+                <div class="flex-grow-1 border-top border-2 mx-2" style="max-width:80px;border-color:var(--success)!important;"></div>
+                <div class="text-center">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-700"
+                         style="width:40px;height:40px;background:var(--success);color:#fff;">✓</div>
+                    <div class="small mt-1 text-success fw-600">Данные</div>
+                </div>
+                <div class="flex-grow-1 border-top border-2 mx-2" style="max-width:80px;border-color:var(--primary)!important;"></div>
+                <div class="text-center">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-700 border-2"
+                         style="width:40px;height:40px;background:var(--primary);color:#fff;">3</div>
+                    <div class="small mt-1 text-primary fw-600">Оплата</div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- Order summary -->
+                <div class="col-md-5">
+                    <div class="card h-100">
+                        <div class="card-header py-3">
+                            <h6 class="mb-0"><i class="bi bi-receipt me-2"></i>Детали заказа</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <dl class="mb-0">
+                                <dt class="text-muted small mb-1">Маршрут</dt>
+                                <dd class="fw-700 mb-3">{{ booking.route.from_city }} → {{ booking.route.to_city }}</dd>
+                                <dt class="text-muted small mb-1">Время отправления</dt>
+                                <dd class="fw-600 mb-3">{{ booking.route.departure_time|time:"H:i" }}</dd>
+                                <dt class="text-muted small mb-1">Дата поездки</dt>
+                                <dd class="fw-700 mb-3">{{ booking.travel_date|date:"d E Y" }}</dd>
+                                <dt class="text-muted small mb-1">Место</dt>
+                                <dd class="mb-3">
+                                    <span class="badge bg-primary fs-5 px-3 py-2">{{ booking.seat.seat_number }}</span>
+                                </dd>
+                                <dt class="text-muted small mb-1">Пассажир</dt>
+                                <dd class="fw-600 mb-3">{{ booking.customer_name }}</dd>
+                                <dt class="text-muted small mb-1">Телефон</dt>
+                                <dd class="fw-600 mb-0">{{ booking.phone }}</dd>
+                            </dl>
+                            <hr>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-700">Итого:</span>
+                                <span class="fw-800 fs-4 text-primary">{{ payment.amount }} тг</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mock payment form -->
+                <div class="col-md-7">
+                    <div class="card">
+                        <div class="card-header py-3 d-flex align-items-center gap-2">
+                            <h6 class="mb-0"><i class="bi bi-lock me-2"></i>Безопасная оплата</h6>
+                            <span class="badge bg-success ms-auto small">MOCK</span>
+                        </div>
+                        <div class="card-body p-4">
+                            <div class="alert border-0 rounded-3 mb-4" style="background:#fef3c7;color:#92400e;">
+                                <i class="bi bi-info-circle me-2"></i>
+                                Это <strong>демо-режим</strong>. Реальные деньги не списываются.
+                            </div>
+
+                            <!-- Fake card UI for aesthetics -->
+                            <div class="rounded-3 p-4 mb-4 text-white"
+                                 style="background:linear-gradient(135deg,#1a56db,#7c3aed);min-height:140px;position:relative;">
+                                <div class="d-flex justify-content-between mb-4">
+                                    <span style="font-size:1.5rem;">💳</span>
+                                    <span class="fw-700 small opacity-75">DEMO CARD</span>
+                                </div>
+                                <div class="fw-700 fs-5 letter-spacing-1 mb-2">•••• •••• •••• 4242</div>
+                                <div class="d-flex justify-content-between small opacity-75">
+                                    <span>DEMO USER</span>
+                                    <span>12/28</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-600 small">Номер карты</label>
+                                <input type="text" class="form-control" value="4242 4242 4242 4242" readonly>
+                            </div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-6">
+                                    <label class="form-label fw-600 small">Срок</label>
+                                    <input type="text" class="form-control" value="12/28" readonly>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label fw-600 small">CVV</label>
+                                    <input type="text" class="form-control" value="•••" readonly>
+                                </div>
+                            </div>
+
+                            <form method="post" action="{% url 'payments:process' booking.pk %}">
+                                {% csrf_token %}
+                                <div class="d-grid gap-2">
+                                    <button type="submit" name="action" value="pay"
+                                            class="btn btn-success btn-lg fw-700">
+                                        <i class="bi bi-check-circle me-2"></i>
+                                        Оплатить {{ payment.amount }} тг
+                                    </button>
+                                    <button type="submit" name="action" value="cancel"
+                                            class="btn btn-outline-secondary"
+                                            onclick="return confirm('Отменить бронирование?')">
+                                        <i class="bi bi-x-circle me-1"></i>Отменить
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

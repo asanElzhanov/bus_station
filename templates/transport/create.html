@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% block title %}Создать транспорт — АвтоВокзал{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-2">
+                <li class="breadcrumb-item"><a href="{% url 'transport:list' %}" class="text-white opacity-75">Транспорт</a></li>
+                <li class="breadcrumb-item active text-white">Создать</li>
+            </ol>
+        </nav>
+        <h1><i class="bi bi-truck me-2"></i>Добавить транспортное средство</h1>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <form method="post" id="transportForm">
+        {% csrf_token %}
+        <input type="hidden" name="layout_json" id="layoutJson">
+
+        <div class="row g-4">
+            <!-- Left: Basic info + Generator -->
+            <div class="col-lg-5">
+                <div class="card mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="mb-0"><i class="bi bi-info-circle me-2"></i>Основная информация</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-4">
+                            <label class="form-label fw-600">Название транспорта <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required
+                                   placeholder="Автобус МАЗ-206" id="transportName">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header py-3">
+                        <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Генератор схемы</h6>
+                    </div>
+                    <div class="card-body p-4">
+                        <p class="text-muted small mb-3">Быстро сгенерировать стандартную схему или настроить вручную.</p>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-600 small">Рядов</label>
+                                <input type="number" id="genRows" value="8" min="1" max="20" class="form-control">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-600 small">Колонок</label>
+                                <input type="number" id="genCols" value="4" min="1" max="8" class="form-control">
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary w-100 mb-3" onclick="generateLayout()">
+                            <i class="bi bi-grid-3x3-gap me-1"></i>Сгенерировать
+                        </button>
+
+                        <div class="d-flex gap-2 mb-3">
+                            <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" onclick="loadPreset('minibus')">
+                                <i class="bi bi-minecart me-1"></i>Маршрутка (13)
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary flex-fill" onclick="loadPreset('bus')">
+                                <i class="bi bi-truck me-1"></i>Автобус (32)
+                            </button>
+                        </div>
+
+                        <div class="border rounded-3 p-3 bg-light">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small text-muted">Мест в схеме:</span>
+                                <span class="fw-700 text-primary" id="seatCount">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Visual seat editor -->
+            <div class="col-lg-7">
+                <div class="card h-100">
+                    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-grid-3x3-gap me-2"></i>Конструктор сидений</h6>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-success small">Кликните для переключения типа</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- Type legend -->
+                        <div class="d-flex gap-3 mb-4 flex-wrap">
+                            <div class="d-flex align-items-center gap-2 small">
+                                <div style="width:18px;height:18px;border-radius:4px;background:#d1fae5;border:2px solid #34d399;"></div>
+                                У окна
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small">
+                                <div style="width:18px;height:18px;border-radius:4px;background:#dbeafe;border:2px solid #60a5fa;"></div>
+                                В проходе
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small">
+                                <div style="width:18px;height:18px;border-radius:4px;background:#f3f4f6;border:2px solid #9ca3af;"></div>
+                                Стандарт
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small">
+                                <div style="width:18px;height:18px;border-radius:4px;background:#fff;border:2px dashed #d1d5db;"></div>
+                                Убрать
+                            </div>
+                        </div>
+
+                        <div id="seatEditorGrid" class="seat-grid mb-4" style="min-height:120px;"></div>
+
+                        <p class="text-muted small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Кликайте по сиденьям чтобы менять тип: окно → проход → стандарт → убрать.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12 d-flex gap-3 justify-content-end">
+                <a href="{% url 'transport:list' %}" class="btn btn-outline-secondary px-4">Отмена</a>
+                <button type="submit" class="btn btn-primary px-5 fw-600" onclick="saveLayout()">
+                    <i class="bi bi-check-lg me-1"></i>Создать транспорт
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TYPES = ['window', 'aisle', 'standard', null]; // null = removed
+const TYPE_STYLES = {
+    window:   { bg: '#d1fae5', border: '#34d399', label: 'W' },
+    aisle:    { bg: '#dbeafe', border: '#60a5fa', label: 'A' },
+    standard: { bg: '#f3f4f6', border: '#9ca3af', label: 'S' },
+    null:     { bg: '#fff',    border: '#e5e7eb', label: '×', dashed: true },
+};
+
+let layout = [];
+
+// ── Presets ──────────────────────────────────────────────────────────────────
+const PRESETS = {
+    minibus: [
+        {seat_number:'1',row:1,col:1,type:'window'}, {seat_number:'2',row:1,col:2,type:'aisle'},
+        {seat_number:'3',row:1,col:3,type:'aisle'}, {seat_number:'4',row:1,col:4,type:'window'},
+        {seat_number:'5',row:2,col:1,type:'window'}, {seat_number:'6',row:2,col:2,type:'aisle'},
+        {seat_number:'7',row:2,col:3,type:'aisle'}, {seat_number:'8',row:2,col:4,type:'window'},
+        {seat_number:'9',row:3,col:1,type:'window'}, {seat_number:'10',row:3,col:2,type:'aisle'},
+        {seat_number:'11',row:3,col:3,type:'aisle'}, {seat_number:'12',row:3,col:4,type:'window'},
+        {seat_number:'13',row:4,col:1,type:'standard'},
+    ],
+    bus: generateLayoutData(8, 4),
+};
+
+function generateLayoutData(rows, cols) {
+    const data = [];
+    let num = 1;
+    for (let r = 1; r <= rows; r++) {
+        for (let c = 1; c <= cols; c++) {
+            data.push({
+                seat_number: String(num++),
+                row: r, col: c,
+                type: (c === 1 || c === cols) ? 'window' : 'aisle'
+            });
+        }
+    }
+    return data;
+}
+
+function loadPreset(name) {
+    layout = JSON.parse(JSON.stringify(PRESETS[name]));
+    renderGrid();
+}
+
+function generateLayout() {
+    const rows = parseInt(document.getElementById('genRows').value) || 8;
+    const cols = parseInt(document.getElementById('genCols').value) || 4;
+    layout = generateLayoutData(rows, cols);
+    renderGrid();
+}
+
+// ── Render grid ───────────────────────────────────────────────────────────────
+function renderGrid() {
+    const container = document.getElementById('seatEditorGrid');
+    container.innerHTML = '';
+
+    if (!layout.length) {
+        container.innerHTML = '<p class="text-muted text-center py-4">Сгенерируйте схему или выберите пресет</p>';
+        document.getElementById('seatCount').textContent = '0';
+        return;
+    }
+
+    // Get bounds
+    const maxRow = Math.max(...layout.map(s => s.row));
+    const maxCol = Math.max(...layout.map(s => s.col));
+
+    for (let r = 1; r <= maxRow; r++) {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'seat-row';
+
+        // Row label
+        const label = document.createElement('span');
+        label.className = 'text-muted small fw-600 me-2';
+        label.style.width = '20px';
+        label.textContent = r;
+        rowEl.appendChild(label);
+
+        for (let c = 1; c <= maxCol; c++) {
+            const seat = layout.find(s => s.row === r && s.col === c);
+            const seatEl = document.createElement('div');
+            seatEl.style.cssText = `
+                width:44px;height:44px;border-radius:8px;border:2px solid;
+                display:flex;align-items:center;justify-content:center;
+                font-size:.7rem;font-weight:700;cursor:pointer;transition:transform .15s;
+                user-select:none;
+            `;
+
+            if (seat) {
+                const st = TYPE_STYLES[seat.type] || TYPE_STYLES.standard;
+                seatEl.style.background = st.bg;
+                seatEl.style.borderColor = st.border;
+                if (st.dashed) seatEl.style.borderStyle = 'dashed';
+                seatEl.textContent = seat.seat_number;
+                seatEl.title = `Место ${seat.seat_number} (${seat.type || 'удалено'})`;
+                seatEl.addEventListener('click', () => cycleSeatType(seat.seat_number));
+            } else {
+                seatEl.style.background = '#fafafa';
+                seatEl.style.borderColor = '#f3f4f6';
+                seatEl.style.cursor = 'default';
+            }
+
+            rowEl.appendChild(seatEl);
+        }
+        container.appendChild(rowEl);
+    }
+
+    const active = layout.filter(s => s.type !== null).length;
+    document.getElementById('seatCount').textContent = active;
+}
+
+function cycleSeatType(seatNum) {
+    const seat = layout.find(s => s.seat_number === seatNum);
+    if (!seat) return;
+    const idx = TYPES.indexOf(seat.type);
+    seat.type = TYPES[(idx + 1) % TYPES.length];
+    renderGrid();
+}
+
+function saveLayout() {
+    const active = layout.filter(s => s.type !== null);
+    document.getElementById('layoutJson').value = JSON.stringify(active);
+}
+
+// ── Init with default layout ──────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+    layout = generateLayoutData(8, 4);
+    renderGrid();
+});
+</script>
+{% endblock %}

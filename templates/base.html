@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}АвтоВокзал{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a56db;
+            --primary-dark: #1341a3;
+            --accent: #ff6b35;
+            --success: #0ea472;
+            --danger: #e02424;
+            --bg: #f4f6fb;
+            --card-bg: #fff;
+            --text: #1e2a3b;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --seat-free: #d1fae5;
+            --seat-free-border: #34d399;
+            --seat-taken: #fee2e2;
+            --seat-taken-border: #f87171;
+            --seat-selected: #fef3c7;
+            --seat-selected-border: #f59e0b;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        /* ── Navbar ── */
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            box-shadow: 0 2px 12px rgba(26,86,219,.25);
+            padding: 0.75rem 0;
+        }
+        .navbar-brand {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: #fff !important;
+            letter-spacing: -0.5px;
+        }
+        .navbar-brand span { color: #93c5fd; }
+        .nav-link { color: rgba(255,255,255,.85) !important; font-weight: 500; transition: color .2s; }
+        .nav-link:hover { color: #fff !important; }
+        .nav-link.active { color: #fff !important; border-bottom: 2px solid #93c5fd; }
+        .badge-role {
+            font-size: .65rem; font-weight: 700; letter-spacing: .5px;
+            padding: 2px 8px; border-radius: 20px; text-transform: uppercase;
+        }
+        .badge-admin { background: var(--accent); color: #fff; }
+        .badge-manager { background: #7c3aed; color: #fff; }
+        .badge-user { background: var(--success); color: #fff; }
+        /* ── Cards ── */
+        .card {
+            border: none; border-radius: 16px;
+            box-shadow: 0 2px 16px rgba(0,0,0,.07);
+            transition: box-shadow .2s, transform .2s;
+        }
+        .card:hover { box-shadow: 0 6px 28px rgba(0,0,0,.12); transform: translateY(-2px); }
+        .card-header {
+            border-radius: 16px 16px 0 0 !important;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: #fff; font-family: 'Montserrat', sans-serif; font-weight: 700;
+        }
+        /* ── Buttons ── */
+        .btn-primary {
+            background: var(--primary); border-color: var(--primary);
+            font-weight: 600; border-radius: 10px;
+            transition: background .2s, transform .1s;
+        }
+        .btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); transform: translateY(-1px); }
+        .btn-accent {
+            background: var(--accent); border-color: var(--accent); color: #fff;
+            font-weight: 600; border-radius: 10px;
+        }
+        .btn-accent:hover { background: #e55a28; border-color: #e55a28; color: #fff; }
+        /* ── Alerts ── */
+        .alert { border: none; border-radius: 12px; font-weight: 500; }
+        /* ── Page header ── */
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, #2563eb 50%, var(--primary) 100%);
+            color: #fff; padding: 3rem 0 2.5rem;
+            margin-bottom: 2rem;
+        }
+        .page-header h1 { font-family: 'Montserrat', sans-serif; font-weight: 800; }
+        /* ── Footer ── */
+        footer {
+            background: #1e2a3b; color: #9ca3af;
+            padding: 1.5rem 0; margin-top: auto; font-size: .875rem;
+        }
+        /* ── Seats ── */
+        .seat-grid { display: flex; flex-direction: column; gap: 6px; }
+        .seat-row { display: flex; gap: 6px; align-items: center; }
+        .seat {
+            width: 44px; height: 44px; border-radius: 8px; border: 2px solid;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .75rem; font-weight: 700; cursor: pointer;
+            transition: transform .15s, box-shadow .15s;
+            user-select: none;
+        }
+        .seat.free {
+            background: var(--seat-free); border-color: var(--seat-free-border); color: #065f46;
+        }
+        .seat.free:hover { transform: scale(1.12); box-shadow: 0 4px 12px rgba(52,211,153,.4); }
+        .seat.taken {
+            background: var(--seat-taken); border-color: var(--seat-taken-border);
+            color: #991b1b; cursor: not-allowed; opacity: .7;
+        }
+        .seat.selected {
+            background: var(--seat-selected); border-color: var(--seat-selected-border);
+            color: #92400e; transform: scale(1.1);
+            box-shadow: 0 4px 16px rgba(245,158,11,.5);
+        }
+        .seat.aisle-gap { background: transparent; border: none; cursor: default; }
+        .seat-legend { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: .85rem; }
+        .legend-box { width: 20px; height: 20px; border-radius: 4px; border: 2px solid; }
+        /* ── Status badges ── */
+        .status-booked { background: #dbeafe; color: #1e40af; }
+        .status-paid { background: #d1fae5; color: #065f46; }
+        .status-cancelled { background: #fee2e2; color: #991b1b; }
+        /* ── Misc ── */
+        .text-accent { color: var(--accent); }
+        .fw-montserrat { font-family: 'Montserrat', sans-serif; }
+        .rounded-xl { border-radius: 16px !important; }
+        @media (max-width: 576px) {
+            .seat { width: 36px; height: 36px; font-size: .65rem; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+    <!-- ── Navigation ── -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'routes:list' %}">
+                🚌 Авто<span>Вокзал</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMain">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.namespace == 'routes' and request.resolver_match.url_name == 'list' %}active{% endif %}"
+                           href="{% url 'routes:list' %}">
+                            <i class="bi bi-map me-1"></i>Маршруты
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'my' %}active{% endif %}"
+                           href="{% url 'bookings:my' %}">
+                            <i class="bi bi-ticket-perforated me-1"></i>Мои билеты
+                        </a>
+                    </li>
+                    {% if user.is_authenticated and user.is_manager or user.is_authenticated and user.is_admin %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'routes:manager_list' %}">
+                            <i class="bi bi-signpost-2 me-1"></i>Мои маршруты
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'transport:list' %}">
+                            <i class="bi bi-truck me-1"></i>Транспорт
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'bookings:list' %}">
+                            <i class="bi bi-ticket-perforated me-1"></i>Бронирования
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav align-items-center gap-2">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <span class="badge-role badge-{{ user.role }}">{{ user.get_role_display }}</span>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'users:profile' %}">
+                                <i class="bi bi-person-circle me-1"></i>{{ user.full_name|default:user.email }}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <form method="post" action="{% url 'users:logout' %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-light rounded-pill px-3">
+                                    <i class="bi bi-box-arrow-right me-1"></i>Выйти
+                                </button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'users:login' %}">
+                                <i class="bi bi-box-arrow-in-right me-1"></i>Войти
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-sm btn-accent rounded-pill px-3" href="{% url 'users:register' %}">
+                                Регистрация
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── Flash Messages ── -->
+    {% if messages %}
+    <div class="container mt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ── Main Content ── -->
+    <main class="flex-grow-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- ── Footer ── -->
+    <footer>
+        <div class="container text-center">
+            <p class="mb-0">🚌 АвтоВокзал &mdash; система управления маршрутами &copy; 2025</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

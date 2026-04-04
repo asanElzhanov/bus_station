@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ transport.name }} — Схема{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <nav aria-label="breadcrumb"><ol class="breadcrumb mb-2">
+            <li class="breadcrumb-item"><a href="{% url 'transport:list' %}" class="text-white opacity-75">Транспорт</a></li>
+            <li class="breadcrumb-item active text-white">{{ transport.name }}</li>
+        </ol></nav>
+        <h1><i class="bi bi-truck me-2"></i>{{ transport.name }}</h1>
+        <p class="opacity-75 mb-0">Всего мест: <strong>{{ transport.total_seats }}</strong></p>
+    </div>
+</div>
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header py-3"><h6 class="mb-0"><i class="bi bi-grid-3x3-gap me-2"></i>Схема сидений</h6></div>
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center gap-2 bg-light rounded-pill px-4 py-2">
+                            <i class="bi bi-caret-up-fill text-primary"></i>
+                            <span class="fw-600 text-muted small">Водитель / Передняя часть</span>
+                            <i class="bi bi-caret-up-fill text-primary"></i>
+                        </div>
+                    </div>
+                    {% regroup seats by position_y as seat_rows %}
+                    <div class="seat-grid justify-content-center">
+                    {% for row in seat_rows %}
+                        <div class="seat-row justify-content-center">
+                            <span class="text-muted small fw-600 me-2" style="width:20px;">{{ row.grouper }}</span>
+                            {% for seat in row.list %}
+                            <div class="seat free"
+                                 style="{% if seat.seat_type == 'window' %}background:#d1fae5;border-color:#34d399{% elif seat.seat_type == 'aisle' %}background:#dbeafe;border-color:#60a5fa{% else %}background:#f3f4f6;border-color:#9ca3af{% endif %};cursor:default;"
+                                 title="Место {{ seat.seat_number }} ({{ seat.get_seat_type_display }})">
+                                {{ seat.seat_number }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                    </div>
+
+                    <div class="seat-legend mt-4 justify-content-center">
+                        <div class="legend-item"><div class="legend-box" style="background:#d1fae5;border-color:#34d399"></div><span>У окна</span></div>
+                        <div class="legend-item"><div class="legend-box" style="background:#dbeafe;border-color:#60a5fa"></div><span>В проходе</span></div>
+                        <div class="legend-item"><div class="legend-box" style="background:#f3f4f6;border-color:#9ca3af"></div><span>Стандарт</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

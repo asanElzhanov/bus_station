@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Регистрация — АвтоВокзал{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-sm-10 col-md-7 col-lg-5">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+                     style="width:72px;height:72px;background:linear-gradient(135deg,var(--accent),#e55a28);">
+                    <i class="bi bi-person-plus text-white fs-1"></i>
+                </div>
+                <h2 class="fw-800 fw-montserrat">Регистрация</h2>
+                <p class="text-muted">Создайте аккаунт</p>
+            </div>
+            <div class="card shadow-sm">
+                <div class="card-body p-4 p-md-5">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% for field in form %}
+                        <div class="mb-4">
+                            <label class="form-label fw-600">
+                                {{ field.label }}
+                                {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ field }}
+                            {% if field.errors %}
+                            <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+                            {% endif %}
+                            {% if field.help_text %}
+                            <div class="text-muted small mt-1">{{ field.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn btn-accent w-100 btn-lg fw-600 mb-3">
+                            <i class="bi bi-person-check me-1"></i>Создать аккаунт
+                        </button>
+                        <p class="text-center text-muted mb-0">
+                            Уже есть аккаунт?
+                            <a href="{% url 'users:login' %}" class="text-primary fw-600">Войти</a>
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Профиль — АвтоВокзал{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="container">
+        <h1><i class="bi bi-person-circle me-2"></i>Мой профиль</h1>
+    </div>
+</div>
+<div class="container pb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-5">
+            <div class="card mb-4">
+                <div class="card-body p-4 text-center">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+                         style="width:80px;height:80px;background:linear-gradient(135deg,var(--primary-dark),var(--primary));">
+                        <span class="text-white fw-800 fs-2">{{ user.full_name|first|upper|default:user.email|first|upper }}</span>
+                    </div>
+                    <h5 class="fw-700 mb-1">{{ user.full_name|default:"—" }}</h5>
+                    <p class="text-muted mb-2">{{ user.email }}</p>
+                    <span class="badge-role badge-{{ user.role }} fs-6">{{ user.get_role_display }}</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header py-3"><h6 class="mb-0">Редактировать данные</h6></div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% for field in form %}
+                        <div class="mb-3">
+                            <label class="form-label fw-600">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                            <div class="text-danger small">{{ field.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn btn-primary w-100 fw-600">
+                            <i class="bi bi-check-lg me-1"></i>Сохранить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
