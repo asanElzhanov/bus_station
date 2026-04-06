@@ -81,18 +81,24 @@ class RouteListView(View):
 
         routes = [route for route in routes if route.total_seats > occupied_map.get(route.id, 0)]
 
-        boarding_cities = sorted(set(
+        boarding_cities = list(
             Stop.objects.filter(
                 route__is_approved=True,
                 is_boarding_allowed=True,
-            ).values_list('city', flat=True)
-        ))
-        alighting_cities = sorted(set(
+            )
+            .order_by('city')
+            .values_list('city', flat=True)
+            .distinct()
+        )
+        alighting_cities = list(
             Stop.objects.filter(
                 route__is_approved=True,
                 is_alighting_allowed=True,
-            ).values_list('city', flat=True)
-        ))
+            )
+            .order_by('city')
+            .values_list('city', flat=True)
+            .distinct()
+        )
         return render(request, 'routes/list.html', {
             'routes': routes,
             'boarding_cities': boarding_cities,
@@ -115,8 +121,14 @@ class RouteDetailView(View):
         to_stop_pk    = request.GET.get('to_stop', '')
 
         # Остановки доступные для выбора пользователем
-        boarding_stops   = [s for s in all_stops if s.is_boarding_allowed]
-        alighting_stops  = [s for s in all_stops if s.is_alighting_allowed]
+        boarding_stops = sorted(
+            [s for s in all_stops if s.is_boarding_allowed],
+            key=lambda s: (s.city or '').lower(),
+        )
+        alighting_stops = sorted(
+            [s for s in all_stops if s.is_alighting_allowed],
+            key=lambda s: (s.city or '').lower(),
+        )
 
         if not from_stop_pk and search_from:
             matched_from = next(
