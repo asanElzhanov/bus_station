@@ -80,8 +80,8 @@
                         <div class="stop-city">{{ stop.city }}</div>
                         <div class="stop-meta">
                             <span class="badge bg-primary">
-                                Приб.: {% if stop.arrival_time %}{{ stop.arrival_time|time:"H:i" }}{% else %}-{% endif %}
-                                | Отпр.: {% if stop.departure_time %}{{ stop.departure_time|time:"H:i" }}{% else %}-{% endif %}
+                                {% if stop.arrival_time %}{{ stop.arrival_time|time:"H:i" }}{% else %}-{% endif %}
+                                | {% if stop.departure_time %}{{ stop.departure_time|time:"H:i" }}{% else %}-{% endif %}
                             </span>
                             {% if stop.order > 0 %}
                             <span class="text-success fw-600">{{ stop.price_from_start }} тг</span>
