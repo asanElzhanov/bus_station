@@ -14,7 +14,7 @@
         <div class="d-flex gap-3 flex-wrap opacity-90">
             <span><i class="bi bi-clock me-1"></i>Отправление: <strong>{{ route.departure_time|time:"H:i" }}</strong></span>
             <span><i class="bi bi-truck me-1"></i>{{ route.transport.name }}</span>
-            <span><i class="bi bi-geo me-1"></i>{{ stops|length }} остановок</span>
+            <span><i class="bi bi-geo me-1"></i>{{ all_stops|length }} остановок</span>
         </div>
     </div>
 </div>
@@ -42,7 +42,7 @@
                         {% for stop in boarding_stops %}
                         <option value="{{ stop.pk }}"
                             {% if from_stop and from_stop.pk == stop.pk %}selected{% endif %}>
-                            {{ stop.city }}{% if stop.arrival_offset_minutes %} (+{{ stop.arrival_offset_minutes }} мин){% endif %}
+                            {{ stop.city }} (отпр.: {% if stop.departure_time %}{{ stop.departure_time|time:"H:i" }}{% else %}-{% endif %})
                         </option>
                         {% endfor %}
                     </select>
@@ -54,7 +54,7 @@
                         {% for stop in alighting_stops %}
                         <option value="{{ stop.pk }}"
                             {% if to_stop and to_stop.pk == stop.pk %}selected{% endif %}>
-                            {{ stop.city }}{% if stop.arrival_offset_minutes %} (+{{ stop.arrival_offset_minutes }} мин){% endif %}
+                            {{ stop.city }} (приб.: {% if stop.arrival_time %}{{ stop.arrival_time|time:"H:i" }}{% else %}-{% endif %})
                         </option>
                         {% endfor %}
                     </select>
@@ -79,11 +79,10 @@
                     <div class="stop-label">
                         <div class="stop-city">{{ stop.city }}</div>
                         <div class="stop-meta">
-                            {% if stop.order == 0 %}
-                            <span class="badge bg-primary">Старт {{ route.departure_time|time:"H:i" }}</span>
-                            {% elif stop.arrival_offset_minutes %}
-                            +{{ stop.arrival_offset_minutes }} мин
-                            {% endif %}
+                            <span class="badge bg-primary">
+                                Приб.: {% if stop.arrival_time %}{{ stop.arrival_time|time:"H:i" }}{% else %}-{% endif %}
+                                | Отпр.: {% if stop.departure_time %}{{ stop.departure_time|time:"H:i" }}{% else %}-{% endif %}
+                            </span>
                             {% if stop.order > 0 %}
                             <span class="text-success fw-600">{{ stop.price_from_start }} тг</span>
                             {% endif %}

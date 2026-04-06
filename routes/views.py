@@ -81,11 +81,22 @@ class RouteListView(View):
 
         routes = [route for route in routes if route.total_seats > occupied_map.get(route.id, 0)]
 
-        cities = sorted(set(
-            Stop.objects.filter(route__is_approved=True).values_list('city', flat=True)
+        boarding_cities = sorted(set(
+            Stop.objects.filter(
+                route__is_approved=True,
+                is_boarding_allowed=True,
+            ).values_list('city', flat=True)
+        ))
+        alighting_cities = sorted(set(
+            Stop.objects.filter(
+                route__is_approved=True,
+                is_alighting_allowed=True,
+            ).values_list('city', flat=True)
         ))
         return render(request, 'routes/list.html', {
-            'routes': routes, 'cities': cities,
+            'routes': routes,
+            'boarding_cities': boarding_cities,
+            'alighting_cities': alighting_cities,
             'search_from': search_from, 'search_to': search_to,
             'search_date': search_date,
         })

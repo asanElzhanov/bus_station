@@ -50,6 +50,7 @@
                             <i class="bi bi-lightbulb me-1 text-primary"></i>
                             <strong>Порядок</strong> — число от 0 (первая остановка).
                             <strong>Цена от начала</strong> — накопленная сумма: у первой остановки <strong>0</strong>.
+                            <strong>Время прибытия/отправления</strong> — можно оставить пустым (в списке будет «-»).
                         </div>
 
                         {{ formset.management_form }}
@@ -66,7 +67,7 @@
                             {% endif %}
                             {% for hidden in stop_form.hidden_fields %}{{ hidden }}{% endfor %}
                             <div class="row g-2">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label fw-600 small">Город *</label>
                                     {{ stop_form.city }}
                                     {% if stop_form.city.errors %}<div class="text-danger small">{{ stop_form.city.errors.0 }}</div>{% endif %}
@@ -75,13 +76,17 @@
                                     <label class="form-label fw-600 small">Порядок *</label>
                                     {{ stop_form.order }}
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <label class="form-label fw-600 small">Цена от начала (тг)</label>
                                     {{ stop_form.price_from_start }}
                                 </div>
-                                <div class="col-md-3">
-                                    <label class="form-label fw-600 small">Мин. от старта</label>
-                                    {{ stop_form.arrival_offset_minutes }}
+                                <div class="col-md-2">
+                                    <label class="form-label fw-600 small">Время прибытия</label>
+                                    {{ stop_form.arrival_time }}
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label fw-600 small">Время отправления</label>
+                                    {{ stop_form.departure_time }}
                                 </div>
                                 <div class="col-12 d-flex gap-4 mt-1">
                                     <div class="form-check">
@@ -118,7 +123,7 @@
                                     </button>
                                 </div>
                                 <div class="row g-2">
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <label class="form-label fw-600 small">Город *</label>
                                         {{ formset.empty_form.city }}
                                     </div>
@@ -126,13 +131,17 @@
                                         <label class="form-label fw-600 small">Порядок *</label>
                                         {{ formset.empty_form.order }}
                                     </div>
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <label class="form-label fw-600 small">Цена от начала (тг)</label>
                                         {{ formset.empty_form.price_from_start }}
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label fw-600 small">Мин. от старта</label>
-                                        {{ formset.empty_form.arrival_offset_minutes }}
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-600 small">Время прибытия</label>
+                                        {{ formset.empty_form.arrival_time }}
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label fw-600 small">Время отправления</label>
+                                        {{ formset.empty_form.departure_time }}
                                     </div>
                                     <div class="col-12 d-flex gap-4 mt-1">
                                         <div class="form-check">
@@ -163,12 +172,12 @@
                     <div class="card-body p-3">
                         <p class="fw-700 small text-success mb-2"><i class="bi bi-lightbulb me-1"></i>Пример заполнения:</p>
                         <table class="table table-sm small mb-0">
-                            <thead><tr><th>Город</th><th>Порядок</th><th>Цена от начала</th><th>Мин. от старта</th></tr></thead>
+                            <thead><tr><th>Город</th><th>Порядок</th><th>Цена от начала</th><th>Прибытие</th><th>Отправление</th></tr></thead>
                             <tbody>
-                                <tr><td>Астана</td><td>0</td><td>0</td><td>0</td></tr>
-                                <tr><td>Кокшетау</td><td>1</td><td>1 500</td><td>120</td></tr>
-                                <tr><td>Петропавловск</td><td>2</td><td>2 800</td><td>240</td></tr>
-                                <tr><td>Алматы</td><td>3</td><td>4 200</td><td>480</td></tr>
+                                <tr><td>Астана</td><td>0</td><td>0</td><td>-</td><td>08:00</td></tr>
+                                <tr><td>Кокшетау</td><td>1</td><td>1 500</td><td>10:00</td><td>10:10</td></tr>
+                                <tr><td>Петропавловск</td><td>2</td><td>2 800</td><td>12:00</td><td>12:05</td></tr>
+                                <tr><td>Алматы</td><td>3</td><td>4 200</td><td>16:00</td><td>-</td></tr>
                             </tbody>
                         </table>
                         <p class="text-muted small mt-2 mb-0">

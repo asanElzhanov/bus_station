@@ -5,7 +5,7 @@ from .models import Route, Stop
 class StopInline(admin.TabularInline):
     model   = Stop
     extra   = 2
-    fields  = ('order', 'city', 'price_from_start', 'arrival_offset_minutes',
+    fields  = ('order', 'city', 'price_from_start', 'arrival_time', 'departure_time',
                'is_boarding_allowed', 'is_alighting_allowed')
     ordering = ('order',)
 

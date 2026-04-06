@@ -46,6 +46,24 @@ class Route(models.Model):
     def last_stop(self):
         return self.stops.order_by('order').last()
 
+    @property
+    def from_city(self):
+        first = self.first_stop
+        return first.city if first else ''
+
+    @property
+    def to_city(self):
+        last = self.last_stop
+        return last.city if last else ''
+
+    @property
+    def price(self):
+        first = self.first_stop
+        last = self.last_stop
+        if not first or not last:
+            return 0
+        return self.segment_price(first, last)
+
     def segment_price(self, from_stop, to_stop):
         """Цена сегмента = разница цен от начала маршрута."""
         return max(0, float(to_stop.price_from_start) - float(from_stop.price_from_start))
@@ -72,8 +90,17 @@ class Stop(models.Model):
         verbose_name='Цена от начала (тг)',
         help_text='0 для первой остановки'
     )
-    arrival_offset_minutes = models.PositiveIntegerField(
-        default=0, verbose_name='Смещение прибытия (мин от старта)'
+    arrival_time = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name='Время прибытия',
+        help_text='Можно оставить пустым ("-")'
+    )
+    departure_time = models.TimeField(
+        null=True,
+        blank=True,
+        verbose_name='Время отправления',
+        help_text='Можно оставить пустым ("-")'
     )
 
     # ── Ограничения продажи билетов ──────────────────────────────────────────

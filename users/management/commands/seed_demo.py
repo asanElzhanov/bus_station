@@ -77,16 +77,16 @@ class Command(BaseCommand):
         if c:
             Stop.objects.bulk_create([
                 Stop(route=r1, city='Астана',
-                     order=0, price_from_start=0,    arrival_offset_minutes=0,
+                     order=0, price_from_start=0,    arrival_time=None, departure_time='08:00',
                      is_boarding_allowed=True,  is_alighting_allowed=False),   # нельзя выйти в начале
                 Stop(route=r1, city='Кокшетау',
-                     order=1, price_from_start=1500, arrival_offset_minutes=120,
+                     order=1, price_from_start=1500, arrival_time='10:00', departure_time='10:10',
                      is_boarding_allowed=True,  is_alighting_allowed=True),
                 Stop(route=r1, city='Петропавловск',
-                     order=2, price_from_start=2800, arrival_offset_minutes=240,
+                     order=2, price_from_start=2800, arrival_time='12:00', departure_time='12:05',
                      is_boarding_allowed=False, is_alighting_allowed=False),   # транзит, без билетов
                 Stop(route=r1, city='Алматы',
-                     order=3, price_from_start=4200, arrival_offset_minutes=480,
+                     order=3, price_from_start=4200, arrival_time='16:00', departure_time=None,
                      is_boarding_allowed=False, is_alighting_allowed=True),    # нельзя сесть в конце
             ])
             self.stdout.write(f'  + Route {r1.name} (с ограничениями остановок)')
@@ -101,13 +101,13 @@ class Command(BaseCommand):
         if c:
             Stop.objects.bulk_create([
                 Stop(route=r2, city='Алматы',
-                     order=0, price_from_start=0,    arrival_offset_minutes=0,
+                     order=0, price_from_start=0,    arrival_time=None, departure_time='10:00',
                      is_boarding_allowed=True,  is_alighting_allowed=False),
                 Stop(route=r2, city='Тараз',
-                     order=1, price_from_start=1800, arrival_offset_minutes=150,
+                     order=1, price_from_start=1800, arrival_time='12:30', departure_time='12:40',
                      is_boarding_allowed=False, is_alighting_allowed=True),    # только выход
                 Stop(route=r2, city='Шымкент',
-                     order=2, price_from_start=2800, arrival_offset_minutes=300,
+                     order=2, price_from_start=2800, arrival_time='15:00', departure_time=None,
                      is_boarding_allowed=False, is_alighting_allowed=True),
             ])
             self.stdout.write(f'  + Route {r2.name} (Тараз — только высадка)')
@@ -121,10 +121,11 @@ class Command(BaseCommand):
         if c:
             Stop.objects.bulk_create([
                 Stop(route=r3, city='Астана',   order=0, price_from_start=0,
+                     arrival_time=None, departure_time='07:30',
                      is_boarding_allowed=True,  is_alighting_allowed=False),
-                Stop(route=r3, city='Балхаш',   order=1, price_from_start=2200, arrival_offset_minutes=200,
+                 Stop(route=r3, city='Балхаш',   order=1, price_from_start=2200, arrival_time='10:50', departure_time='11:00',
                      is_boarding_allowed=True,  is_alighting_allowed=True),
-                Stop(route=r3, city='Шымкент',  order=2, price_from_start=5000, arrival_offset_minutes=480,
+                 Stop(route=r3, city='Шымкент',  order=2, price_from_start=5000, arrival_time='15:30', departure_time=None,
                      is_boarding_allowed=False, is_alighting_allowed=True),
             ])
             self.stdout.write(f'  + Route {r3.name} (pending)')
