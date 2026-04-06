@@ -30,7 +30,7 @@ class StopForm(forms.ModelForm):
         widgets = {
             'city':                  forms.TextInput(attrs={'placeholder': 'Астана'}),
             'order':                 forms.NumberInput(attrs={'min': 0}),
-            'price_from_start':      forms.NumberInput(attrs={'min': 0, 'step': '100'}),
+            'price_from_start':      forms.NumberInput(attrs={'min': 0}),
             'arrival_time':          forms.TimeInput(attrs={'type': 'time'}),
             'departure_time':        forms.TimeInput(attrs={'type': 'time'}),
         }
