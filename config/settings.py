@@ -50,6 +50,7 @@ MIDDLEWARE = [
 CSRF_TRUSTED_ORIGINS = [
     origin.strip() for origin in config('CSRF_TRUSTED_ORIGINS', default='').split(',') if origin.strip()
 ]
+print(f"CSRF_TRUSTED_ORIGINS: {CSRF_TRUSTED_ORIGINS}")
 
 ROOT_URLCONF = 'config.urls'
 
