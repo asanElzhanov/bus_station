@@ -20,6 +20,11 @@ class Route(models.Model):
         related_name='routes', verbose_name='Транспорт'
     )
     departure_time = models.TimeField(verbose_name='Время отправления (с первой остановки)')
+    booking_max_days = models.PositiveSmallIntegerField(
+        default=7,
+        verbose_name='Максимум дней для продажи',
+        help_text='Сколько дней вперёд можно покупать билеты на этот маршрут'
+    )
     is_approved = models.BooleanField(default=False, verbose_name='Подтверждён')
     created_by = models.ForeignKey(
         'users.User', on_delete=models.SET_NULL, null=True,

@@ -16,7 +16,7 @@ class LoginView(View):
 
     def get(self, request):
         if request.user.is_authenticated:
-            return redirect('routes:list')
+            return redirect('/')
         return render(request, self.template_name, {'form': LoginForm()})
 
     def post(self, request):
@@ -27,8 +27,7 @@ class LoginView(View):
             user = authenticate(request, username=email, password=password)
             if user:
                 login(request, user)
-                next_url = request.GET.get('next', 'routes:list')
-                return redirect(next_url)
+                return redirect('/')
             messages.error(request, 'Неверный email или пароль')
         return render(request, self.template_name, {'form': form})
 

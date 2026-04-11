@@ -3,13 +3,24 @@ from .models import Route, Stop
 
 
 class RouteForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance or not self.instance.pk:
+            self.fields['booking_max_days'].initial = 7
+
     class Meta:
         model  = Route
-        fields = ('name', 'transport', 'departure_time')
-        labels = {'name': 'Название маршрута', 'transport': 'Транспорт', 'departure_time': 'Время отправления'}
+        fields = ('name', 'transport', 'departure_time', 'booking_max_days')
+        labels = {
+            'name': 'Название маршрута',
+            'transport': 'Транспорт',
+            'departure_time': 'Время отправления',
+            'booking_max_days': 'Максимум дней для продажи',
+        }
         widgets = {
             'departure_time': forms.TimeInput(attrs={'type': 'time'}),
             'name': forms.TextInput(attrs={'placeholder': 'Астана — Алматы'}),
+            'booking_max_days': forms.NumberInput(attrs={'min': 1}),
         }
 
 

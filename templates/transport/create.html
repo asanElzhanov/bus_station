@@ -99,6 +99,10 @@
                                 Стандарт
                             </div>
                             <div class="d-flex align-items-center gap-2 small">
+                                <div style="width:18px;height:18px;border-radius:4px;background:#eef2ff;border:2px dashed #a5b4fc;"></div>
+                                Проход (не место)
+                            </div>
+                            <div class="d-flex align-items-center gap-2 small">
                                 <div style="width:18px;height:18px;border-radius:4px;background:#fff;border:2px dashed #d1d5db;"></div>
                                 Убрать
                             </div>
@@ -108,12 +112,12 @@
 
                         <p class="text-muted small">
                             <i class="bi bi-info-circle me-1"></i>
-                            Кликайте по сиденьям чтобы менять тип: окно → проход → стандарт → убрать.
+                            Кликайте по ячейкам чтобы менять тип: окно → в проходе → стандарт → проход (не место) → убрать.
                         </p>
                     </div>
                 </div>
             </div>
-        </div>
+                            Клик по ячейке меняет тип. Shift+клик позволяет задать свой номер места.
 
         <div class="row mt-4">
             <div class="col-12 d-flex gap-3 justify-content-end">
@@ -129,15 +133,20 @@
 
 {% block extra_js %}
 <script>
-const TYPES = ['window', 'aisle', 'standard', null]; // null = removed
+const TYPES = ['window', 'aisle', 'standard', 'passage', null]; // null = removed
 const TYPE_STYLES = {
     window:   { bg: '#d1fae5', border: '#34d399', label: 'W' },
     aisle:    { bg: '#dbeafe', border: '#60a5fa', label: 'A' },
     standard: { bg: '#f3f4f6', border: '#9ca3af', label: 'S' },
+    passage:  { bg: '#eef2ff', border: '#a5b4fc', label: '||', dashed: true },
     null:     { bg: '#fff',    border: '#e5e7eb', label: '×', dashed: true },
 };
 
 let layout = [];
+
+function getSeatNumberText(seat) {
+    return seat && seat.seat_number ? String(seat.seat_number) : '';
+}
 
 // ── Presets ──────────────────────────────────────────────────────────────────
 const PRESETS = {
@@ -221,9 +230,23 @@ function renderGrid() {
                 seatEl.style.background = st.bg;
                 seatEl.style.borderColor = st.border;
                 if (st.dashed) seatEl.style.borderStyle = 'dashed';
-                seatEl.textContent = seat.seat_number;
-                seatEl.title = `Место ${seat.seat_number} (${seat.type || 'удалено'})`;
-                seatEl.addEventListener('click', () => cycleSeatType(seat.seat_number));
+                seatEl.style.position = 'relative';
+                seatEl.innerHTML = `
+                    <span style="line-height:1;">${seat.type === 'passage' ? '||' : getSeatNumberText(seat)}</span>
+                    <span style="position:absolute;right:3px;bottom:2px;font-size:.55rem;opacity:.75;">${seat.type === 'passage' ? '' : '✎'}</span>
+                `;
+                seatEl.title = seat.type === 'passage'
+                    ? 'Проход (не место)'
+                    : `Место ${seat.seat_number} (${seat.type || 'удалено'}). Shift+клик — изменить номер.`;
+                seatEl.addEventListener('click', (event) => {
+                    if (event.shiftKey) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        editSeatNumber(seat.seat_number);
+                        return;
+                    }
+                    cycleSeatType(seat.seat_number);
+                });
             } else {
                 seatEl.style.background = '#fafafa';
                 seatEl.style.borderColor = '#f3f4f6';
@@ -235,7 +258,7 @@ function renderGrid() {
         container.appendChild(rowEl);
     }
 
-    const active = layout.filter(s => s.type !== null).length;
+    const active = layout.filter(s => s.type !== null && s.type !== 'passage').length;
     document.getElementById('seatCount').textContent = active;
 }
 
@@ -244,6 +267,23 @@ function cycleSeatType(seatNum) {
     if (!seat) return;
     const idx = TYPES.indexOf(seat.type);
     seat.type = TYPES[(idx + 1) % TYPES.length];
+    renderGrid();
+}
+
+function editSeatNumber(seatNum) {
+    const seat = layout.find(s => s.seat_number === seatNum);
+    if (!seat || seat.type === 'passage') return;
+
+    const nextValue = prompt('Введите номер места:', seat.seat_number || '');
+    if (nextValue === null) return;
+
+    const cleaned = String(nextValue).trim();
+    if (!cleaned) {
+        alert('Номер места не может быть пустым.');
+        return;
+    }
+
+    seat.seat_number = cleaned;
     renderGrid();
 }
 

@@ -8,11 +8,12 @@ Booking views.
   - Проверка is_boarding_allowed / is_alighting_allowed при создании брони.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction, IntegrityError
 from django.views import View
+from django.utils import timezone
 
 from users.permissions import ManagerRequiredMixin
 from routes.models import Route, Stop
@@ -44,6 +45,24 @@ def get_occupied_seat_ids(route, travel_date, from_stop, to_stop):
     )
 
 
+def is_boarding_time_passed(travel_date, from_stop):
+    """
+    Returns True when boarding time at selected stop is already in the past.
+
+    Rule:
+      selected travel date + stop arrival time < current local datetime
+    If arrival time is missing, fallback to departure time.
+    """
+    stop_time = from_stop.arrival_time or from_stop.departure_time
+    if not stop_time:
+        return False
+
+    stop_datetime = datetime.combine(travel_date, stop_time)
+    local_tz = timezone.get_current_timezone()
+    stop_datetime = timezone.make_aware(stop_datetime, local_tz)
+    return stop_datetime < timezone.localtime()
+
+
 # ─── Публичные views ──────────────────────────────────────────────────────────
 
 class BookingCreateView(View):
@@ -62,12 +81,26 @@ class BookingCreateView(View):
         to_stop     = form.cleaned_data['to_stop']
         travel_date = form.cleaned_data['travel_date']
 
+        max_booking_date = date.today() + timedelta(days=route.booking_max_days or 7)
+        if travel_date > max_booking_date:
+            messages.error(
+                request,
+                f'Билеты на этот маршрут можно купить только до {max_booking_date.strftime("%d.%m.%Y")}.'
+            )
+            return redirect(f'/routes/{route_pk}/?date={travel_date}&from_stop={from_stop.pk}&to_stop={to_stop.pk}')
+
         # ── Проверка ограничений остановок ───────────────────────────────────
         if not from_stop.is_boarding_allowed:
             messages.error(request, f'Посадка в «{from_stop.city}» недоступна для продажи.')
             return redirect(f'/routes/{route_pk}/?date={travel_date}&from_stop={from_stop.pk}&to_stop={to_stop.pk}')
         if not to_stop.is_alighting_allowed:
             messages.error(request, f'Высадка в «{to_stop.city}» недоступна для продажи.')
+            return redirect(f'/routes/{route_pk}/?date={travel_date}&from_stop={from_stop.pk}&to_stop={to_stop.pk}')
+        if is_boarding_time_passed(travel_date, from_stop):
+            messages.error(
+                request,
+                f'Покупка с остановки «{from_stop.city}» недоступна: время прибытия уже прошло.'
+            )
             return redirect(f'/routes/{route_pk}/?date={travel_date}&from_stop={from_stop.pk}&to_stop={to_stop.pk}')
 
         price = route.segment_price(from_stop, to_stop)
@@ -206,13 +239,19 @@ class BookingListView(ManagerRequiredMixin, View):
         if not request.user.is_admin:
             bookings = bookings.filter(route__created_by=request.user)
 
-        filter_date   = request.GET.get('date', '')
+        filter_date = request.GET.get('date', '').strip()
         filter_status = request.GET.get('status', '')
-        if filter_date:
-            try:
-                bookings = bookings.filter(travel_date=date.fromisoformat(filter_date))
-            except ValueError:
-                pass
+
+        # По умолчанию показываем сегодняшние брони, если дата не передана.
+        if not filter_date:
+            filter_date = str(date.today())
+
+        try:
+            bookings = bookings.filter(travel_date=date.fromisoformat(filter_date))
+        except ValueError:
+            filter_date = str(date.today())
+            bookings = bookings.filter(travel_date=date.fromisoformat(filter_date))
+
         if filter_status in dict(Booking.Status.choices):
             bookings = bookings.filter(status=filter_status)
 

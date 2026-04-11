@@ -24,18 +24,23 @@
                             <i class="bi bi-caret-up-fill text-primary"></i>
                         </div>
                     </div>
-                    {% regroup seats by position_y as seat_rows %}
-                    <div class="seat-grid justify-content-center">
-                    {% for row in seat_rows %}
-                        <div class="seat-row justify-content-center">
-                            <span class="text-muted small fw-600 me-2" style="width:20px;">{{ row.grouper }}</span>
-                            {% for seat in row.list %}
-                            <div class="seat free"
-                                 style="{% if seat.seat_type == 'window' %}background:#d1fae5;border-color:#34d399{% elif seat.seat_type == 'aisle' %}background:#dbeafe;border-color:#60a5fa{% else %}background:#f3f4f6;border-color:#9ca3af{% endif %};cursor:default;"
-                                 title="Место {{ seat.seat_number }} ({{ seat.get_seat_type_display }})">
-                                {{ seat.seat_number }}
-                            </div>
+                    <div class="seat-grid justify-content-center layout-balanced-grid" style="--layout-max-slots: {{ layout_max_slots }};">
+                    {% for row_num, cells, row_slots in layout_rows %}
+                        <div class="d-flex align-items-center w-100">
+                            <span class="text-muted small fw-600 me-2" style="width:20px;">{{ row_num }}</span>
+                            <div class="seat-row layout-balanced-row" style="--row-slot-count: {{ row_slots }};">
+                            {% for cell in cells %}
+                                {% if cell.kind == 'seat' %}
+                                <div class="seat free"
+                                     style="{% if cell.seat.seat_type == 'window' %}background:#d1fae5;border-color:#34d399{% elif cell.seat.seat_type == 'aisle' %}background:#dbeafe;border-color:#60a5fa{% else %}background:#f3f4f6;border-color:#9ca3af{% endif %};cursor:default;"
+                                     title="Место {{ cell.seat.seat_number }} ({{ cell.seat.get_seat_type_display }})">
+                                    {{ cell.seat.seat_number }}
+                                </div>
+                                {% elif cell.kind == 'passage' %}
+                                <div class="seat seat-passage" title="Проход (не место)"></div>
+                                {% endif %}
                             {% endfor %}
+                            </div>
                         </div>
                     {% endfor %}
                     </div>
@@ -44,10 +49,42 @@
                         <div class="legend-item"><div class="legend-box" style="background:#d1fae5;border-color:#34d399"></div><span>У окна</span></div>
                         <div class="legend-item"><div class="legend-box" style="background:#dbeafe;border-color:#60a5fa"></div><span>В проходе</span></div>
                         <div class="legend-item"><div class="legend-box" style="background:#f3f4f6;border-color:#9ca3af"></div><span>Стандарт</span></div>
+                        <div class="legend-item"><div class="legend-box" style="background:#eef2ff;border:2px dashed #a5b4fc"></div><span>Проход (не место)</span></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.layout-balanced-grid {
+    --slot-size: 42px;
+    --slot-gap: 8px;
+    width: min(100%, calc(var(--layout-max-slots) * var(--slot-size) + (var(--layout-max-slots) - 1) * 16px));
+}
+
+.layout-balanced-row {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: clamp(6px, calc(var(--slot-gap) + (var(--layout-max-slots) - var(--row-slot-count)) * 1.25px), 16px);
+}
+
+.layout-balanced-row .seat {
+    width: var(--slot-size);
+    min-width: var(--slot-size);
+    max-width: var(--slot-size);
+}
+
+.seat-passage {
+    background: transparent !important;
+    border: 2px solid transparent !important;
+    box-shadow: none !important;
+    pointer-events: none;
+    cursor: default !important;
+}
+</style>
 {% endblock %}

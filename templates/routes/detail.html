@@ -33,7 +33,7 @@
                 <div class="col-md-3">
                     <label class="form-label fw-600"><i class="bi bi-geo-alt text-primary me-1"></i>Дата поездки</label>
                     <input type="date" name="date" value="{{ selected_date }}"
-                           min="{{ today }}" class="form-control" id="dateInput">
+                              min="{{ today }}" max="{{ max_booking_date }}" class="form-control" id="dateInput">
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-600"><i class="bi bi-box-arrow-in-right text-success me-1"></i>Откуда садитесь</label>
@@ -68,7 +68,7 @@
         </div>
     </div>
 
-    <!-- ── Маршрут-линия (визуализация остановок) ──────────────────────────── -->
+    {% comment %} <!-- ── Маршрут-линия (визуализация остановок) ──────────────────────────── -->
     <div class="card mb-4">
         <div class="card-body p-4">
             <div class="stops-timeline">
@@ -99,7 +99,7 @@
                 {% endfor %}
             </div>
         </div>
-    </div>
+    </div> {% endcomment %}
 
     {% if segment_selected %}
     <!-- ── Шаг 2: Схема мест ──────────────────────────────────────────────── -->
@@ -121,19 +121,22 @@
                         </div>
                     </div>
 
-                    <div class="seat-grid justify-content-center" style="width:fit-content;">
-                        {% for row_num, cols in grid_rows %}
-                        <div class="seat-row">
-                            <span class="text-muted small fw-600 me-2" style="width:22px;">{{ row_num }}</span>
-                            {% for col_num, seat in cols.items %}
-                            <div class="seat {% if seat.is_occupied %}taken{% else %}free{% endif %}"
-                                 {% if not seat.is_occupied %}
-                                 onclick="selectSeat({{ seat.pk }}, '{{ seat.seat_number }}')"
-                                 {% endif %}
-                                 data-seat-id="{{ seat.pk }}"
-                                 title="Место {{ seat.seat_number }} — {% if seat.is_occupied %}занято{% else %}свободно{% endif %}">
-                                {{ seat.seat_number }}
-                            </div>
+                    <div class="seat-grid justify-content-center layout-balanced-grid {% if booking_blocked_by_time %}seat-grid-disabled{% endif %}" style="--layout-max-slots: {{ layout_max_slots }};">
+                        {% for row_num, cells, row_slots in layout_rows %}
+                        <div class="seat-row layout-balanced-row" style="--row-slot-count: {{ row_slots }};">
+                            {% for cell in cells %}
+                                {% if cell.kind == 'seat' %}
+                                <div class="seat {% if cell.is_occupied %}taken{% else %}free{% endif %}"
+                                     {% if not cell.is_occupied and not booking_blocked_by_time %}
+                                     onclick="selectSeat({{ cell.seat.pk }}, '{{ cell.seat.seat_number }}')"
+                                     {% endif %}
+                                     data-seat-id="{{ cell.seat.pk }}"
+                                     title="Место {{ cell.seat.seat_number }} — {% if cell.is_occupied %}занято{% else %}свободно{% endif %}">
+                                    {{ cell.seat.seat_number }}
+                                </div>
+                                {% elif cell.kind == 'passage' %}
+                                <div class="seat seat-passage" title="Проход (не место)"></div>
+                                {% endif %}
                             {% endfor %}
                         </div>
                         {% endfor %}
@@ -152,6 +155,10 @@
                             <div class="legend-box" style="background:var(--seat-selected);border-color:var(--seat-selected-border)"></div>
                             <span>Выбрано</span>
                         </div>
+                        <div class="legend-item">
+                            <div class="legend-box" style="background:#eef2ff;border:2px dashed #a5b4fc"></div>
+                            <span>Проход (не место)</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -169,6 +176,8 @@
                         <dd class="fw-600">{{ route.departure_time|time:"H:i" }}</dd>
                         <dt class="text-muted">Дата</dt>
                         <dd class="fw-600">{{ selected_date }}</dd>
+                        <dt class="text-muted">Лимит продаж</dt>
+                        <dd class="fw-600">до {{ max_booking_date }}</dd>
                         <dt class="text-muted">Сегмент</dt>
                         <dd class="fw-700 text-primary">{{ from_stop.city }} → {{ to_stop.city }}</dd>
                         <dt class="text-muted">Стоимость</dt>
@@ -181,7 +190,11 @@
             <div class="card">
                 <div class="card-body p-4 text-center text-muted">
                     <i class="bi bi-hand-index-thumb display-4 opacity-25 d-block mb-2"></i>
+                    {% if booking_blocked_by_time %}
+                    Выбор мест временно недоступен: время посадки уже прошло
+                    {% else %}
                     Нажмите на свободное место для бронирования
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -197,6 +210,19 @@
     </div>
     {% endif %}
 </div>
+
+{% if booking_blocked_by_time %}
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;">
+    <div id="expiredBookingToast" class="toast align-items-center text-bg-warning border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body fw-600">
+                <i class="bi bi-clock-history me-2"></i>{{ booking_block_reason }}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- ── Modal бронирования ─────────────────────────────────────────────────── -->
 <div class="modal fade" id="bookingModal" tabindex="-1" aria-hidden="true">
@@ -278,7 +304,7 @@
     align-items: center;
     position: relative;
     flex: 1;
-    min-width: 90px;
+    min-width: 180px;
 }
 .stop-dot {
     width: 16px; height: 16px;
@@ -329,6 +355,39 @@
 .stop-restricted .stop-dot  { background: #e5e7eb !important; box-shadow: 0 0 0 2px #9ca3af !important; }
 .stop-restricted .stop-city { color: #9ca3af; text-decoration: line-through; }
 .stop-restricted .stop-line { background: #e5e7eb !important; }
+
+.layout-balanced-grid {
+    --slot-size: 42px;
+    --slot-gap: 8px;
+    width: min(100%, calc(var(--layout-max-slots) * var(--slot-size) + (var(--layout-max-slots) - 1) * 16px));
+}
+
+.layout-balanced-row {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: clamp(6px, calc(var(--slot-gap) + (var(--layout-max-slots) - var(--row-slot-count)) * 1.25px), 16px);
+}
+
+.layout-balanced-row .seat {
+    width: var(--slot-size);
+    min-width: var(--slot-size);
+    max-width: var(--slot-size);
+}
+
+.seat-passage {
+    background: transparent !important;
+    border: 2px solid transparent !important;
+    box-shadow: none !important;
+    pointer-events: none;
+    cursor: default !important;
+}
+
+.seat-grid-disabled {
+    pointer-events: none;
+    opacity: .6;
+    filter: grayscale(.1);
+}
 </style>
 {% endblock %}
 
@@ -336,6 +395,8 @@
 <script>
 const routePk = {{ route.pk }};
 const phoneInput = document.getElementById('phoneInput');
+const bookingBlockedByTime = {% if booking_blocked_by_time %}true{% else %}false{% endif %};
+const bookingBlockedReason = "{{ booking_block_reason|escapejs }}";
 
 function formatPhone(value) {
     const digits = value.replace(/\D/g, '').replace(/^8/, '7').slice(0, 11);
@@ -386,6 +447,16 @@ if (phoneInput) {
 }
 
 function selectSeat(seatId, seatNum) {
+    if (bookingBlockedByTime) {
+        const toastEl = document.getElementById('expiredBookingToast');
+        if (toastEl) {
+            bootstrap.Toast.getOrCreateInstance(toastEl).show();
+        } else {
+            alert(bookingBlockedReason || 'Время посадки уже прошло.');
+        }
+        return;
+    }
+
     document.querySelectorAll('.seat.selected').forEach(el => {
         el.classList.remove('selected');
         el.classList.add('free');
@@ -416,5 +487,12 @@ document.getElementById('segmentForm').addEventListener('submit', function(e) {
     }
     // order-данные получим через data-атрибуты
 });
+
+if (bookingBlockedByTime) {
+    const toastEl = document.getElementById('expiredBookingToast');
+    if (toastEl) {
+        bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 6000 }).show();
+    }
+}
 </script>
 {% endblock %}

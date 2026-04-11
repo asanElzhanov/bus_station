@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from django import forms
 from django.db.models import Count
 from django.shortcuts import render, redirect, get_object_or_404
@@ -7,10 +7,61 @@ from django.forms import inlineformset_factory, BaseInlineFormSet
 from django.views import View
 
 from users.permissions import ManagerRequiredMixin, AdminRequiredMixin
-from bookings.views import get_occupied_seat_ids
+from bookings.views import get_occupied_seat_ids, is_boarding_time_passed
 from bookings.models import Booking
 from .models import Route, Stop
 from .forms import RouteForm, StopForm
+
+
+def build_layout_rows(route, occupied_ids=None):
+    occupied_ids = occupied_ids or set()
+    seats = list(route.transport.seats.all())
+    seat_map = {
+        (seat.position_y, seat.position_x): seat
+        for seat in seats
+    }
+
+    layout_items = route.transport.layout or []
+    if not layout_items:
+        max_row = max([seat.position_y for seat in seats], default=0)
+        max_col = max([seat.position_x for seat in seats], default=0)
+        layout_items = [
+            {'row': r, 'col': c, 'type': 'standard'}
+            for r in range(1, max_row + 1)
+            for c in range(1, max_col + 1)
+            if (r, c) in seat_map
+        ]
+
+    sorted_items = sorted(
+        layout_items,
+        key=lambda item: (int(item.get('row', 0)), int(item.get('col', 0))),
+    )
+
+    rows_map = {}
+    for item in sorted_items:
+        row = int(item.get('row', 0))
+        col = int(item.get('col', 0))
+        if row <= 0 or col <= 0:
+            continue
+
+        if item.get('type') == 'passage':
+            rows_map.setdefault(row, []).append({'kind': 'passage', 'col': col})
+            continue
+
+        seat = seat_map.get((row, col))
+        if not seat:
+            continue
+
+        rows_map.setdefault(row, []).append({
+            'kind': 'seat',
+            'seat': seat,
+            'is_occupied': seat.id in occupied_ids,
+            'col': col,
+        })
+
+    rows = [(row, cells, len(cells)) for row, cells in sorted(rows_map.items())]
+    max_slots = max((slot_count for _, _, slot_count in rows), default=1)
+    return rows, max_slots
 
 
 class StopInlineFormSet(BaseInlineFormSet):
@@ -114,6 +165,8 @@ class RouteDetailView(View):
         all_stops = list(route.stops.order_by('order'))
 
         today         = str(date.today())
+        max_booking_date = date.today() + timedelta(days=route.booking_max_days or 7)
+        max_booking_date_str = str(max_booking_date)
         selected_date = request.GET.get('date', today)
         search_from = request.GET.get('from_city', '').strip()
         search_to = request.GET.get('to_city', '').strip()
@@ -123,11 +176,11 @@ class RouteDetailView(View):
         # Остановки доступные для выбора пользователем
         boarding_stops = sorted(
             [s for s in all_stops if s.is_boarding_allowed],
-            key=lambda s: (s.city or '').lower(),
+            key=lambda s: s.order,
         )
         alighting_stops = sorted(
             [s for s in all_stops if s.is_alighting_allowed],
-            key=lambda s: (s.city or '').lower(),
+            key=lambda s: s.order,
         )
 
         if not from_stop_pk and search_from:
@@ -181,23 +234,27 @@ class RouteDetailView(View):
 
         occupied_ids  = set()
         segment_price = None
+        booking_blocked_by_time = False
+        booking_block_reason = ''
         if from_stop and to_stop:
             try:
                 date_obj = date.fromisoformat(selected_date)
             except ValueError:
                 date_obj = date.today()
                 selected_date = str(date_obj)
+            if date_obj > max_booking_date:
+                date_obj = max_booking_date
+                selected_date = str(date_obj)
             occupied_ids  = get_occupied_seat_ids(route, date_obj, from_stop, to_stop)
             segment_price = route.segment_price(from_stop, to_stop)
+            booking_blocked_by_time = is_boarding_time_passed(date_obj, from_stop)
+            if booking_blocked_by_time:
+                booking_block_reason = (
+                    f'Время прибытия на остановку «{from_stop.city}» уже прошло. '
+                    'Выбор мест недоступен для этой даты.'
+                )
 
-        seats = route.transport.seats.all()
-        for seat in seats:
-            seat.is_occupied = seat.id in occupied_ids
-
-        grid = {}
-        for seat in seats:
-            grid.setdefault(seat.position_y, {})[seat.position_x] = seat
-        grid_rows = sorted(grid.items())
+        layout_rows, layout_max_slots = build_layout_rows(route, occupied_ids=occupied_ids)
 
         return render(request, 'routes/detail.html', {
             'route': route,
@@ -206,11 +263,15 @@ class RouteDetailView(View):
             'alighting_stops': alighting_stops,
             'selected_date': selected_date,
             'today': today,
+            'max_booking_date': max_booking_date_str,
             'from_stop': from_stop,
             'to_stop': to_stop,
             'segment_price': segment_price,
-            'grid_rows': grid_rows,
+            'layout_rows': layout_rows,
+            'layout_max_slots': layout_max_slots,
             'segment_selected': bool(from_stop and to_stop),
+            'booking_blocked_by_time': booking_blocked_by_time,
+            'booking_block_reason': booking_block_reason,
             'search_from': search_from,
             'search_to': search_to,
         })

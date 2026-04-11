@@ -55,6 +55,8 @@ class Transport(models.Model):
         self.seats.all().delete()
         seats_to_create = []
         for item in self.layout:
+            if item.get('type') in ('passage', None):
+                continue
             seats_to_create.append(Seat(
                 transport=self,
                 seat_number=item.get('seat_number', f'{item["row"]}{item["col"]}'),
