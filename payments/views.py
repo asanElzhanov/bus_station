@@ -1,6 +1,6 @@
 """
 Mock payment views.
-После успешной оплаты cookie_token брони добавляется в куки (7 дней).
+После успешной оплаты cookie_token брони добавляется в куки только для гостей.
 """
 
 import uuid
@@ -52,10 +52,11 @@ class PaymentProcessView(View):
                     request,
                     f'✅ Оплата прошла! Транзакция: {payment.transaction_id}'
                 )
-                # ── Записываем cookie_token в куки на 7 дней ──────────────────
                 resp   = redirect('bookings:confirm', pk=booking.pk)
-                tokens = get_guest_tokens(request)
-                add_guest_token(resp, tokens, str(booking.cookie_token))
+                if not request.user.is_authenticated:
+                    # ── Записываем cookie_token в куки на 7 дней для гостей ──
+                    tokens = get_guest_tokens(request)
+                    add_guest_token(resp, tokens, str(booking.cookie_token))
                 return resp
 
             elif action == 'cancel':

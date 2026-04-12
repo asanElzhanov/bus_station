@@ -2,10 +2,11 @@
 Booking views.
 
 Новое:
-    - При создании брони cookie_token пишется в куки (7 дней).
-  - MyBookingsView — публичная страница «Мои билеты» по куки.
-  - GuestRefundView — возврат билета гостем (до отправления).
-  - Проверка is_boarding_allowed / is_alighting_allowed при создании брони.
+    - Для гостей брони сохраняются по cookie_token (7 дней).
+    - Для авторизованных пользователей брони привязываются к аккаунту.
+    - MyBookingsView — страница «Мои билеты» по аккаунту или по cookie.
+    - GuestRefundView — возврат билета гостем или владельцем аккаунта.
+    - Проверка is_boarding_allowed / is_alighting_allowed при создании брони.
 """
 
 from datetime import date, datetime, timedelta
@@ -122,6 +123,7 @@ class BookingCreateView(View):
                     customer_name=form.cleaned_data['customer_name'],
                     phone=form.cleaned_data['phone'],
                     extra_info=form.cleaned_data.get('extra_info', ''),
+                    user=request.user if request.user.is_authenticated else None,
                     status=Booking.Status.BOOKED,
                 )
         except IntegrityError:
@@ -137,8 +139,9 @@ class BookingCreateView(View):
 
         messages.success(request, f'Билет успешно забронирован. Номер брони: #{booking.pk}.')
         resp = redirect('bookings:confirm', pk=booking.pk)
-        tokens = get_guest_tokens(request)
-        add_guest_token(resp, tokens, str(booking.cookie_token))
+        if not request.user.is_authenticated:
+            tokens = get_guest_tokens(request)
+            add_guest_token(resp, tokens, str(booking.cookie_token))
         return resp
 
 
@@ -147,10 +150,11 @@ class BookingConfirmView(View):
 
     def get(self, request, pk):
         booking = get_object_or_404(Booking, pk=pk)
-        tokens  = get_guest_tokens(request)
         resp    = render(request, 'bookings/confirm.html', {'booking': booking})
-        # Обновляем TTL куки при каждом просмотре подтверждения
-        refresh_guest_tokens(resp, tokens)
+        if not request.user.is_authenticated:
+            tokens = get_guest_tokens(request)
+            # Обновляем TTL куки при каждом просмотре подтверждения
+            refresh_guest_tokens(resp, tokens)
         return resp
 
 
@@ -158,27 +162,36 @@ class BookingConfirmView(View):
 
 class MyBookingsView(View):
     """
-    Публичная страница — показывает все брони из куки браузера.
-    Не требует авторизации.
-    TTL куки сбрасывается на 7 дней при каждом посещении.
+    Показывает брони из аккаунта для авторизованных пользователей.
+    Для гостей показывает брони из cookie браузера.
+    TTL куки сбрасывается на 7 дней при каждом посещении гостевой страницы.
     """
 
     def get(self, request):
-        tokens   = get_guest_tokens(request)
         bookings = []
-        if tokens:
+        tokens = []
+        if request.user.is_authenticated:
             bookings = list(
-                Booking.objects.filter(cookie_token__in=tokens)
+                Booking.objects.filter(user=request.user)
                 .select_related('route', 'seat', 'from_stop', 'to_stop')
                 .order_by('-created_at')
             )
+        else:
+            tokens = get_guest_tokens(request)
+            if tokens:
+                bookings = list(
+                    Booking.objects.filter(cookie_token__in=tokens)
+                    .select_related('route', 'seat', 'from_stop', 'to_stop')
+                    .order_by('-created_at')
+                )
         now = datetime.now()
         resp = render(request, 'bookings/my_bookings.html', {
             'bookings': bookings,
             'now': now,
         })
-        # Сброс TTL на 7 дней при каждом посещении
-        refresh_guest_tokens(resp, tokens)
+        if tokens:
+            # Сброс TTL на 7 дней при каждом посещении гостевой страницы
+            refresh_guest_tokens(resp, tokens)
         return resp
 
 
@@ -186,25 +199,29 @@ class MyBookingsView(View):
 
 class GuestRefundView(View):
     """
-    Гость возвращает свой билет.
+    Гость или авторизованный пользователь возвращает свой билет.
     Проверяем:
-      1. Токен в куки браузера совпадает с cookie_token брони.
+      1. Токен в куки браузера совпадает с cookie_token брони
+         или бронь принадлежит текущему аккаунту.
       2. Текущее время < время отправления первой остановки.
     """
 
+    def _has_access(self, request, booking):
+        if request.user.is_authenticated and booking.user_id == request.user.id:
+            return True
+        tokens = get_guest_tokens(request)
+        return str(booking.cookie_token) in tokens
+
     def get(self, request, token):
         booking = get_object_or_404(Booking, cookie_token=token)
-        tokens  = get_guest_tokens(request)
-        if str(booking.cookie_token) not in tokens:
-            messages.error(request, 'Билет не найден в вашем браузере.')
+        if not self._has_access(request, booking):
+            messages.error(request, 'Нет доступа к этому билету.')
             return redirect('bookings:my')
         return render(request, 'bookings/refund_confirm.html', {'booking': booking})
 
     def post(self, request, token):
         booking = get_object_or_404(Booking, cookie_token=token)
-        tokens  = get_guest_tokens(request)
-
-        if str(booking.cookie_token) not in tokens:
+        if not self._has_access(request, booking):
             messages.error(request, 'Нет прав на возврат этого билета.')
             return redirect('bookings:my')
 

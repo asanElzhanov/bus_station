@@ -2,11 +2,13 @@
 Booking model.
 
 Новое:
-  - cookie_token  — UUID привязывающий бронь к браузеру гостя (7 дней)
-  - can_refund()  — можно вернуть до момента отправления с первой остановки
+    - cookie_token  — UUID привязывающий бронь к браузеру гостя (7 дней)
+    - user          — привязка брони к аккаунту для авторизованных пользователей
+    - can_refund()  — можно вернуть до момента отправления с первой остановки
 """
 
 import uuid
+from django.conf import settings
 from django.db import models
 
 
@@ -40,6 +42,15 @@ class Booking(models.Model):
     customer_name = models.CharField(max_length=150, verbose_name='Имя клиента')
     phone = models.CharField(max_length=20, verbose_name='Телефон')
     extra_info = models.TextField(blank=True, verbose_name='Доп. информация')
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='bookings',
+        verbose_name='Пользователь',
+    )
 
     status = models.CharField(
         max_length=15, choices=Status.choices,

@@ -5,7 +5,11 @@
 <div class="page-header">
     <div class="container">
         <h1><i class="bi bi-ticket-perforated me-2"></i>Мои билеты</h1>
+        {% if request.user.is_authenticated %}
+        <p class="mb-0 opacity-75">Сохранены в вашем аккаунте</p>
+        {% else %}
         <p class="mb-0 opacity-75">Сохранены в браузере на 7 дней</p>
+        {% endif %}
     </div>
 </div>
 
@@ -120,23 +124,35 @@
             <i class="bi bi-ticket-perforated" style="font-size:3rem;color:#94a3b8;"></i>
         </div>
         <h4 class="text-muted">Билетов не найдено</h4>
+        {% if request.user.is_authenticated %}
+        <p class="text-muted mb-4">
+            У этого аккаунта пока нет бронирований.<br>
+            Новые билеты будут отображаться здесь автоматически.
+        </p>
+        {% else %}
         <p class="text-muted mb-4">
             Ваши билеты сохраняются в браузере на 7 дней после оплаты.<br>
             Если вы меняли браузер или устройство — билеты не отобразятся.
         </p>
+        {% endif %}
         <a href="{% url 'routes:list' %}" class="btn btn-primary px-4">
             <i class="bi bi-map me-1"></i>Найти маршруты
         </a>
     </div>
     {% endif %}
 
-    <!-- Пояснение про куки -->
+    <!-- Пояснение про хранение -->
     <div class="card border-0 mt-4" style="background:#f0f9ff;">
         <div class="card-body p-3 d-flex gap-3 align-items-start">
             <i class="bi bi-info-circle text-info flex-shrink-0 mt-1"></i>
             <div class="small text-muted">
+                {% if request.user.is_authenticated %}
+                <strong>Как это работает:</strong> ваши билеты привязаны к аккаунту и доступны после входа с любого устройства.
+                Сохраните номер брони как резервную копию.
+                {% else %}
                 <strong>Как это работает:</strong> ваши билеты привязаны к этому браузеру через cookie и хранятся <strong>7 дней</strong>.
                 При очистке куки или смене браузера — список пропадёт. Сохраните номер брони как резервную копию.
+                {% endif %}
             </div>
         </div>
     </div>
