@@ -168,6 +168,7 @@ class RouteDetailView(View):
         max_booking_date = date.today() + timedelta(days=route.booking_max_days or 7)
         max_booking_date_str = str(max_booking_date)
         selected_date = request.GET.get('date', today)
+        date_out_of_range = False
         search_from = request.GET.get('from_city', '').strip()
         search_to = request.GET.get('to_city', '').strip()
         from_stop_pk  = request.GET.get('from_stop', '')
@@ -243,16 +244,20 @@ class RouteDetailView(View):
                 date_obj = date.today()
                 selected_date = str(date_obj)
             if date_obj > max_booking_date:
-                date_obj = max_booking_date
-                selected_date = str(date_obj)
-            occupied_ids  = get_occupied_seat_ids(route, date_obj, from_stop, to_stop)
-            segment_price = route.segment_price(from_stop, to_stop)
-            booking_blocked_by_time = is_boarding_time_passed(date_obj, from_stop)
-            if booking_blocked_by_time:
+                date_out_of_range = True
                 booking_block_reason = (
-                    f'Время прибытия на остановку «{from_stop.city}» уже прошло. '
-                    'Выбор мест недоступен для этой даты.'
+                    f'Дата {date_obj.strftime("%d.%m.%Y")} недоступна для бронирования. '
+                    f'Выберите дату не позже {max_booking_date_str}. '
                 )
+            else:
+                occupied_ids  = get_occupied_seat_ids(route, date_obj, from_stop, to_stop)
+                segment_price = route.segment_price(from_stop, to_stop)
+                booking_blocked_by_time = is_boarding_time_passed(date_obj, from_stop)
+                if booking_blocked_by_time:
+                    booking_block_reason = (
+                        f'Время прибытия на остановку «{from_stop.city}» уже прошло. '
+                        'Выбор мест недоступен для этой даты.'
+                    )
 
         layout_rows, layout_max_slots = build_layout_rows(route, occupied_ids=occupied_ids)
 
@@ -270,6 +275,7 @@ class RouteDetailView(View):
             'layout_rows': layout_rows,
             'layout_max_slots': layout_max_slots,
             'segment_selected': bool(from_stop and to_stop),
+            'date_out_of_range': date_out_of_range,
             'booking_blocked_by_time': booking_blocked_by_time,
             'booking_block_reason': booking_block_reason,
             'search_from': search_from,

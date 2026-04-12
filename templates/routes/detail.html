@@ -33,7 +33,11 @@
                 <div class="col-md-3">
                     <label class="form-label fw-600"><i class="bi bi-geo-alt text-primary me-1"></i>Дата поездки</label>
                     <input type="date" name="date" value="{{ selected_date }}"
-                              min="{{ today }}" max="{{ max_booking_date }}" class="form-control" id="dateInput">
+                              min="{{ today }}" max="{{ max_booking_date }}" class="form-control" id="dateInput" aria-describedby="dateHelp dateLiveValue">
+                    <div id="dateHelp" class="form-text">
+                        Можно выбрать только до {{ max_booking_date }} включительно.
+                    </div>
+                    <div id="dateLiveValue" class="small fw-600 text-primary mt-1">Выбрана дата: {{ selected_date }}</div>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-600"><i class="bi bi-box-arrow-in-right text-success me-1"></i>Откуда садитесь</label>
@@ -101,7 +105,7 @@
         </div>
     </div> {% endcomment %}
 
-    {% if segment_selected %}
+    {% if segment_selected and not date_out_of_range %}
     <!-- ── Шаг 2: Схема мест ──────────────────────────────────────────────── -->
     <div class="row g-4">
         <div class="col-lg-8">
@@ -199,6 +203,18 @@
             </div>
         </div>
     </div>
+    {% elif date_out_of_range %}
+    <div class="card border-0" style="background:linear-gradient(135deg,#fff7ed,#ffedd5);">
+        <div class="card-body p-5 text-center">
+            <i class="bi bi-exclamation-triangle display-2 text-warning opacity-75 d-block mb-3"></i>
+            <h4 class="fw-700 text-warning">Дата недоступна для бронирования</h4>
+            <p class="text-muted mb-0">
+                {% if booking_block_reason %}{{ booking_block_reason }}{% else %}
+                Выберите другую дату в пределах доступного лимита.
+                {% endif %}
+            </p>
+        </div>
+    </div>
     {% else %}
     <!-- Подсказка если сегмент не выбран -->
     <div class="card border-0" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);">
@@ -283,6 +299,31 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: date limit warning -->
+<div class="modal fade" id="dateLimitModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-xl overflow-hidden">
+            <div class="modal-header bg-warning border-0">
+                <h5 class="modal-title fw-700 text-dark">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Дата недоступна
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="mb-2 text-muted">
+                    Выбранная дата превышает доступный лимит бронирования.
+                </p>
+                <p class="mb-0 fw-600">
+                    Дата автоматически изменена на <span id="dateLimitValue"></span>.
+                </p>
+            </div>
+            <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                <button type="button" class="btn btn-warning fw-600" data-bs-dismiss="modal">Понятно</button>
+            </div>
         </div>
     </div>
 </div>
@@ -395,6 +436,12 @@
 <script>
 const routePk = {{ route.pk }};
 const phoneInput = document.getElementById('phoneInput');
+const dateInput = document.getElementById('dateInput');
+const dateLiveValue = document.getElementById('dateLiveValue');
+const dateLimitModalEl = document.getElementById('dateLimitModal');
+const dateLimitValueEl = document.getElementById('dateLimitValue');
+const dateLimitModal = dateLimitModalEl ? bootstrap.Modal.getOrCreateInstance(dateLimitModalEl) : null;
+const maxBookingDate = "{{ max_booking_date }}";
 const bookingBlockedByTime = {% if booking_blocked_by_time %}true{% else %}false{% endif %};
 const bookingBlockedReason = "{{ booking_block_reason|escapejs }}";
 
@@ -446,6 +493,37 @@ if (phoneInput) {
     });
 }
 
+function updateDateSummary() {
+    if (dateLiveValue && dateInput) {
+        dateLiveValue.textContent = `Выбрана дата: ${dateInput.value || '—'}`;
+    }
+}
+
+function clampDateToMax() {
+    if (!dateInput || !maxBookingDate || !dateInput.value) {
+        return;
+    }
+
+    if (dateInput.value > maxBookingDate) {
+        dateInput.value = maxBookingDate;
+        if (dateLimitValueEl) {
+            dateLimitValueEl.textContent = maxBookingDate;
+        }
+        if (dateLimitModal) {
+            dateLimitModal.show();
+        } else {
+            alert(`Дата доступна только до ${maxBookingDate}.`);
+        }
+        updateDateSummary();
+    }
+}
+
+if (dateInput) {
+    dateInput.addEventListener('change', clampDateToMax);
+    dateInput.addEventListener('input', updateDateSummary);
+    updateDateSummary();
+}
+
 function selectSeat(seatId, seatNum) {
     if (bookingBlockedByTime) {
         const toastEl = document.getElementById('expiredBookingToast');
@@ -471,13 +549,13 @@ function selectSeat(seatId, seatNum) {
     new bootstrap.Modal(document.getElementById('bookingModal')).show();
 }
 
-// Авто-сабмит при смене даты
-document.getElementById('dateInput').addEventListener('change', function () {
-    document.getElementById('segmentForm').submit();
-});
-
 // Валидация: to_stop должен быть позже from_stop
 document.getElementById('segmentForm').addEventListener('submit', function(e) {
+    if (dateInput && dateInput.value && maxBookingDate && dateInput.value > maxBookingDate) {
+        e.preventDefault();
+        alert(`Дата доступна только до ${maxBookingDate}. Выберите другую дату.`);
+        return;
+    }
     const from = document.getElementById('fromStopSelect');
     const to   = document.getElementById('toStopSelect');
     if (!from.value || !to.value) {
