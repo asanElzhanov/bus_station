@@ -137,7 +137,7 @@ class RouteListView(View):
                 route__is_approved=True,
                 is_boarding_allowed=True,
             )
-            .order_by('city')
+            .order_by('order')
             .values_list('city', flat=True)
             .distinct()
         )
@@ -146,7 +146,7 @@ class RouteListView(View):
                 route__is_approved=True,
                 is_alighting_allowed=True,
             )
-            .order_by('city')
+            .order_by('order')
             .values_list('city', flat=True)
             .distinct()
         )
